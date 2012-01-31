@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+# Load local configuration
+[ -f ./localrc ] && source ./localrc
+
+# Set api HOST_IP endpoint.  SERVICE_HOST may also be used to specify the endpoint,
+# which is convenient for some localrc configurations.
+HOST_IP=${HOST_IP:-127.0.0.1}
+SERVICE_HOST=${SERVICE_HOST:-$HOST_IP}
+
+# Some exercises call glance directly.  On a single-node installation, Glance
+# should be listening on HOST_IP.  If its running elsewhere, it can be set here
+GLANCE_HOST=${GLANCE_HOST:-$HOST_IP}
+
+# Nova original used project_id as the *account* that owned resources (servers,
+# ip address, ...)   With the addition of Keystone we have standardized on the
+# term **tenant** as the entity that owns the resources.  **novaclient** still
+# uses the old deprecated terms project_id.  Note that this field should now be
+# set to tenant_name, not tenant_id.
+export NOVA_PROJECT_ID=${TENANT:-demo}
+
+# In addition to the owning entity (tenant), nova stores the entity performing
+# the action as the **user**.
+export NOVA_USERNAME=${USERNAME:-demo}
+
+# With Keystone you pass the keystone password instead of an api key.
+# The most recent versions of novaclient use NOVA_PASSWORD instead of NOVA_API_KEY
+export NOVA_PASSWORD=${ADMIN_PASSWORD:-secrete}
+
+# With the addition of Keystone, to use an openstack cloud you should
+# authenticate against keystone, which returns a **Token** and **Service
+# Catalog**.  The catalog contains the endpoint for all services the user/tenant
+# has access to - including nova, glance, keystone, swift, ...  We currently
+# recommend using the 2.0 *auth api*.
+#
+# *NOTE*: Using the 2.0 *auth api* does not mean that compute api is 2.0.  We
+# will use the 1.1 *compute api*
+export NOVA_URL=${NOVA_URL:-http://$SERVICE_HOST:5000/v2.0/}
+
+# Currently novaclient needs you to specify the *compute api* version.  This
+# needs to match the config of your catalog returned by Keystone.
+export NOVA_VERSION=${NOVA_VERSION:-1.1}
+
+# FIXME - why does this need to be specified?
+export NOVA_REGION_NAME=${NOVA_REGION_NAME:-RegionOne}
+
+# Set the ec2 url so euca2ools works
+export EC2_URL=${EC2_URL:-http://$SERVICE_HOST:8773/services/Cloud}
+
+# Access key is set in the initial keystone data to be the same as username
+export EC2_ACCESS_KEY=${USERNAME:-demo}
+
+# Secret key is set in the initial keystone data to the admin password
+export EC2_SECRET_KEY=${ADMIN_PASSWORD:-secrete}
+
+# Euca2ools Certificate stuff for uploading bundles
+# You can get your certs using ./tools/get_certs.sh
+NOVARC=$(readlink -f "${BASH_SOURCE:-${0}}" 2>/dev/null) ||
+        NOVARC=$(python -c 'import os,sys; print os.path.abspath(os.path.realpath(sys.argv[1]))' "${BASH_SOURCE:-${0}}")
+NOVA_KEY_DIR=${NOVARC%/*}
+export S3_URL=http://$SERVICE_HOST:3333
+export EC2_USER_ID=42 # nova does not use user id, but bundling requires it
+export EC2_PRIVATE_KEY=${NOVA_KEY_DIR}/pk.pem
+export EC2_CERT=${NOVA_KEY_DIR}/cert.pem
+export NOVA_CERT=${NOVA_KEY_DIR}/cacert.pem
+export EUCALYPTUS_CERT=${NOVA_CERT} # euca-bundle-image seems to require this set
+alias ec2-bundle-image="ec2-bundle-image --cert ${EC2_CERT} --privatekey ${EC2_PRIVATE_KEY} --user 42 --ec2cert ${NOVA_CERT}"
+alias ec2-upload-bundle="ec2-upload-bundle -a ${EC2_ACCESS_KEY} -s ${EC2_SECRET_KEY} --url ${S3_URL} --ec2cert ${NOVA_CERT}"
+
+# set log level to DEBUG (helps debug issues)
+# export NOVACLIENT_DEBUG=1
+
+# Max time till the vm is bootable
+export BOOT_TIMEOUT=${BOOT_TIMEOUT:-30}
+
+# Max time to wait while vm goes from build to active state
+export ACTIVE_TIMEOUT=${ACTIVE_TIMEOUT:-30}
+
+# Max time from run instance command until it is running
+export RUNNING_TIMEOUT=${RUNNING_TIMEOUT:-$(($BOOT_TIMEOUT + $ACTIVE_TIMEOUT))}
+
+# Max time to wait for proper IP association and dis-association.
+export ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-15}
