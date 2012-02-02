@@ -162,7 +162,7 @@ fi
 
 # delete the server
 nova delete $VM_UUID
-if ! timeout $SHUTDOWN_TIMEOUT sh -c " while ! nova list | cut -d' ' -f2 | egrep -v '^\||^\+|ID'|grep -v $VM_UUID; do sleep 1; done"; then 
+if ! timeout $SHUTDOWN_TIMEOUT sh -c " while nova list | cut -d' ' -f2 | egrep -v '^\||^\+|ID'|grep -q $VM_UUID; do sleep 1; done"; then 
 	echo "server didn't shut down properly"
 	exit 1
 fi
