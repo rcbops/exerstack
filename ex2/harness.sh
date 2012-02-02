@@ -110,7 +110,7 @@ for d in ${BASEDIR}/tests/*.sh; do
     for test in ${fnlist}; do
     	printf " %-${COLSIZE}s" "${test}"
 	if (should_run ${testname} ${test}); then
-	    resultcolour="green"  # for you, darrin :p
+	    resultcolour="green"  # for you, darren :p
 	    start=$(date +%s.%N)
 
 	    echo "=== TEST: ${testname}/${test} ===" > ${tmpdir}/test.txt
