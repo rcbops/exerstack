@@ -113,6 +113,25 @@ for ID in $KERNEL_ID $RAMDISK_ID $MACHINE_ID; do
 	fi
 done
 
+# update an images metadata
+glance -A $TOKEN update $MACHINE_ID is_public=False
+if ! glance -A $TOKEN show $MACHINE_ID | grep 'Public: No'; then
+	echo "metadata did not get updated correctly"
+	exit 1
+fi
+
+# now put it back to how it was
+# note - glance has a '''feature''' where it strips the aki and ari references from the metadata
+# if you update some other metadata, so we have to put it back
+# BUG/ANSWER: 767027
+glance -A $TOKEN update $MACHINE_ID is_public=True kernel_id=$KERNEL_ID ramdisk_id=$RAMDISK_ID
+if ! glance -A $TOKEN show $MACHINE_ID | grep 'Public: Yes'; then
+	echo "metadata did not get updated correctly"
+	exit 1
+fi
+
+
+
 # TODO: MORE TESTS!
 
 
@@ -169,9 +188,12 @@ fi
 
 
 # cleanup
+function cleanup {
 for IMAGE in $KERNEL_ID $RAMDISK_ID $MACHINE_ID; do
     if ! glance -A $TOKEN --force delete $IMAGE; then
 	echo "image did not delete properly"
 	exit 1
     fi
 done
+}
+cleanup
