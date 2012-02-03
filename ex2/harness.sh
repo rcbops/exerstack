@@ -70,16 +70,16 @@ function should_run() {
     return 0
 }
 
-function colorize() {
-    # $1: color
+function colourise() {
+    # $1: colour
     # $2+ message
 
-    local color=${1}
+    local colour=${1}
     shift
     local message="$@"
 
     if [ -t 1 ] && [ "${TERM}" != "" ]; then
-	eval "printf \"\$${color}\""
+	eval "printf \"\$${colour}\""
     fi
 
     echo ${message}
@@ -131,9 +131,9 @@ for d in ${BASEDIR}/tests/*.sh; do
 		PASSED=$(( ${PASSED} + 1 ))
 	    fi
 
-	    colorize ${resultcolour} " ${result}"
+	    colourise ${resultcolour} " ${result}"
 	else
-	    colorize boldyellow " SKIP"
+	    colourise boldyellow " SKIP"
 	    SKIPPED=$(( ${SKIPPED} + 1 ))
 	fi
     done
@@ -148,15 +148,15 @@ echo
 echo "RESULTS:"
 
 echo -n "Passed:  "
-colorize green ${PASSED}
+colourise green ${PASSED}
 echo -n "Failed:  "
-colorize red ${FAILED}
+colourise red ${FAILED}
 echo -n "Skipped: "
-colorize boldyellow ${SKIPPED}
+colourise boldyellow ${SKIPPED}
 
 echo
 if [ "$FAILED" -ne "0" ]; then
-    colorize red ERROR TEST OUTPUT
+    colourise red ERROR TEST OUTPUT
     cat ${tmpdir}/notice.txt
     exit 1
 fi
