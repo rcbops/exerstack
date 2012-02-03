@@ -114,7 +114,9 @@ for d in ${BASEDIR}/tests/*.sh; do
 	    start=$(date +%s.%N)
 
 	    echo "=== TEST: ${testname}/${test} ===" > ${tmpdir}/test.txt
-	    eval "${test}; status=\$?" >> ${tmpdir}/test.txt 2>&1
+
+	    eval "(set -e; ${test}; set +e); status=\$?" >> ${tmpdir}/test.txt 2>&1
+
 	    end=$(date +%s.%N)
 
 	    elapsed=$(echo "${end}-${start}*100/100" | bc -q 2> /dev/null)
