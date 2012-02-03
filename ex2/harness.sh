@@ -115,7 +115,7 @@ for d in ${BASEDIR}/tests/*.sh; do
 
 	    echo "=== TEST: ${testname}/${test} ===" > ${tmpdir}/test.txt
 
-	    eval "(set -e; ${test}; set +e); status=\$?" >> ${tmpdir}/test.txt 2>&1
+	    eval "(set -e; set -x; ${test}; set +x; set +e); status=\$?" >> ${tmpdir}/test.txt 2>&1
 
 	    end=$(date +%s.%N)
 
