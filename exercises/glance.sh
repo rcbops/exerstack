@@ -5,12 +5,12 @@
 #    blarg
 #}
 #
-#function some_glance_thing() {
+#function some_thing() {
 #    sleep .8
 #}
 
 
-function glance_010_upload_image() {
+function 010_upload_image() {
 
     # Create a directory for the downloaded image tarballs.
     if ! mkdir -p $IMAGE_DIR/$UNTARRED_IMAGES; then
@@ -18,14 +18,14 @@ function glance_010_upload_image() {
     fi
    
     # we'll use ami-tty as our test image
-    if [[ ! -f $IMAGE_DIR/$IMAGE.tgz ]]; then
+    if [[ ! -f $IMAGE_DIR/${IMAGE}.tgz ]]; then
         wget -q -c $IMAGE_URL -O $IMAGE_DIR/$IMAGE.tgz
     fi
    
     # untar the image
-    tar -zxf $IMAGE_DIR/tty.tgz -C $IMAGE_DIR/$UNTARRED_IMAGES
+    tar -zxf $IMAGE_DIR/$IMAGE.tgz -C $IMAGE_DIR/$UNTARRED_IMAGES
 
-    # zero the image_numbers file to make sure the glance_delete 
+    # zero the image_numbers file to make sure the delete 
     # function doesn't try and delete old images if we bomb out of this
     # function early
     >$IMAGE_DIR/$IMAGES_FILE
@@ -64,7 +64,7 @@ function glance_010_upload_image() {
 }
 
 
-function glance_020_boot_image() {
+function 020_boot_image() {
 
 
     # let's get the image numbers we're dealing with here
@@ -134,7 +134,7 @@ function glance_020_boot_image() {
 }
 
 
-function glance_030_show_meta() {
+function 030_show_meta() {
 
     # let's get the image numbers we're dealing with here
     if [[ -f $IMAGE_DIR/$IMAGES_FILE ]]; then
@@ -173,7 +173,7 @@ function glance_030_show_meta() {
 }
 
 
-function glance_040_update_metadata() {
+function 040_update_metadata() {
 
     # let's get the image numbers we're dealing with here
     if [[ -f $IMAGE_DIR/$IMAGES_FILE ]]; then
@@ -186,7 +186,7 @@ function glance_040_update_metadata() {
 }
 
 
-function glance_090_delete_images() {
+function 090_delete_images() {
 
     # let's get the image numbers we're dealing with here
     if [[ -f $IMAGE_DIR/$IMAGES_FILE ]]; then
