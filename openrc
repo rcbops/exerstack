@@ -17,15 +17,19 @@ GLANCE_HOST=${GLANCE_HOST:-$HOST_IP}
 # term **tenant** as the entity that owns the resources.  **novaclient** still
 # uses the old deprecated terms project_id.  Note that this field should now be
 # set to tenant_name, not tenant_id.
-export NOVA_PROJECT_ID=${TENANT:-demo}
+export NOVA_PROJECT_ID=${NOVA_PROJECT_ID:-openstack}
 
 # In addition to the owning entity (tenant), nova stores the entity performing
 # the action as the **user**.
-export NOVA_USERNAME=${USERNAME:-demo}
+export NOVA_USERNAME=${NOVA_USERNAME:-admin}
 
 # With Keystone you pass the keystone password instead of an api key.
 # The most recent versions of novaclient use NOVA_PASSWORD instead of NOVA_API_KEY
-export NOVA_PASSWORD=${ADMIN_PASSWORD:-secrete}
+export NOVA_PASSWORD=${NOVA_PASSWORD:-secrete}
+export NOVA_API_KEY=${NOVA_API_KEY:-secrete}
+# NB for backward compatibility between nova cli versions, could use:
+# export NOVA_API_KEY=${NOVA_API_KEY:-${NOVA_PASSWORD:-secrete}}
+# but let's get used to specifiying the correct var in our localrc, OK?
 
 # With the addition of Keystone, to use an openstack cloud you should
 # authenticate against keystone, which returns a **Token** and **Service
