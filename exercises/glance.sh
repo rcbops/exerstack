@@ -1,14 +1,6 @@
 #!/bin/bash
 
 
-#function real_error_output() {
-#    blarg
-#}
-#
-#function some_thing() {
-#    sleep .8
-#}
-
 
 function 010_upload_image() {
 
@@ -31,8 +23,11 @@ function 010_upload_image() {
     >$IMAGE_DIR/$IMAGES_FILE
     
     # upload the kernel image
-    KERNEL_ID=$(glance -A $TOKEN add name="tty-kernel" is_public=true container_format=aki disk_format=aki < $IMAGE_DIR/$UNTARRED_IMAGES/aki-tty/image |  cut -d":" -f2 | tr -d " ")
-    # check we actually have an id number
+    KERNEL_ID=$(glance -A $TOKEN add name="tty-kernel" is_public=true \
+    container_format=aki disk_format=aki < $IMAGE_DIR/$UNTARRED_IMAGES/aki-tty/image |  \
+    cut -d":" -f2 | tr -d " ")
+    
+    # write the ID out to a local file for use in other tests/functions
     if [[ $KERNEL_ID =~ ^[0-9]+$ ]]; then
         echo "KERNEL_ID=$KERNEL_ID" >> $IMAGE_DIR/$IMAGES_FILE
     else
@@ -41,7 +36,11 @@ function 010_upload_image() {
     fi
     
     # upload the ramdisk image
-    RAMDISK_ID=$(glance -A $TOKEN add name="tty-ramdisk" is_public=true container_format=ari disk_format=ari < $IMAGE_DIR/$UNTARRED_IMAGES/ari-tty/image |  cut -d":" -f2 | tr -d " ")
+    RAMDISK_ID=$(glance -A $TOKEN add name="tty-ramdisk" is_public=true \
+    container_format=ari disk_format=ari < $IMAGE_DIR/$UNTARRED_IMAGES/ari-tty/image |  \
+    cut -d":" -f2 | tr -d " ")
+    
+    # write the ID out to a local file for use in other tests/functions
     if [[ $RAMDISK_ID =~ ^[0-9]+$ ]]; then
         echo "RAMDISK_ID=$RAMDISK_ID" >> $IMAGE_DIR/$IMAGES_FILE
     else
@@ -50,7 +49,11 @@ function 010_upload_image() {
     fi
     
     # upload the machine image
-    MACHINE_ID=$(glance add -A $TOKEN name="tty" is_public=true container_format=ami disk_format=ami kernel_id=$KERNEL_ID ramdisk_id=$RAMDISK_ID < $IMAGE_DIR/$UNTARRED_IMAGES/ami-tty/image |  cut -d":" -f2 | tr -d " ")
+    MACHINE_ID=$(glance add -A $TOKEN name="tty" is_public=true \
+    container_format=ami disk_format=ami kernel_id=$KERNEL_ID ramdisk_id=$RAMDISK_ID \
+    < $IMAGE_DIR/$UNTARRED_IMAGES/ami-tty/image |  cut -d":" -f2 | tr -d " ")
+    
+    # write the ID out to a local file for use in other tests/functions
     if [[ $MACHINE_ID =~ ^[0-9]+$ ]]; then
         echo "MACHINE_ID=$MACHINE_ID" >> $IMAGE_DIR/$IMAGES_FILE
     else
@@ -64,7 +67,7 @@ function 010_upload_image() {
 }
 
 
-function 020_boot_image() {
+function 080_boot_image() {
 
 
     # let's get the image numbers we're dealing with here
@@ -76,22 +79,17 @@ function 020_boot_image() {
     fi
 
     # determine instance type to boot
-    echo "NOVA_URL=$NOVA_URL"
-    echo "NOVA_USERNAME=$NOVA_USERNAME"
-    echo "NOVA_API_KEY=$NOVA_API_KEY"
-    echo "NOVA_PROJECT_ID=$NOVA_PROJECT_ID"
-
-    INSTANCE_TYPE=`nova flavor-list | grep $DEFAULT_INSTANCE_TYPE | cut -d"|" -f2`
+    INSTANCE_TYPE=$(nova flavor-list | grep $DEFAULT_INSTANCE_TYPE | cut -d"|" -f2)
     if [[ -z "$INSTANCE_TYPE" ]]; then
        # grab the first flavor in the list to launch if default doesn't exist
-       INSTANCE_TYPE=`nova flavor-list | head -n 4 | tail -n 1 | cut -d"|" -f2`
+       INSTANCE_TYPE=$(nova flavor-list | head -n 4 | tail -n 1 | cut -d"|" -f2)
     else
        INSTANCE_TYPE="1"
     fi
     
     # boot a server!
     NAME="myserver"
-    VM_UUID=`nova boot --flavor $INSTANCE_TYPE --image $MACHINE_ID $NAME | grep ' id ' | cut -d"|" -f3 | sed 's/ //g'`
+    VM_UUID=$(nova boot --flavor $INSTANCE_TYPE --image $MACHINE_ID $NAME | grep ' id ' | cut -d"|" -f3 | sed 's/ //g')
     
     
     # Waiting for boot
@@ -102,7 +100,7 @@ function 020_boot_image() {
     fi
     
     # get the IP of the server
-    IP=`nova show $VM_UUID | grep "private network" | cut -d"|" -f3`
+    IP=$(nova show $VM_UUID | grep "private network" | cut -d"|" -f3)
     
     # for single node deployments, we can ping private ips
     MULTI_HOST=${MULTI_HOST:-0}
@@ -134,7 +132,7 @@ function 020_boot_image() {
 }
 
 
-function 030_show_meta() {
+function 030_show_details() {
 
     # let's get the image numbers we're dealing with here
     if [[ -f $IMAGE_DIR/$IMAGES_FILE ]]; then
@@ -145,7 +143,7 @@ function 030_show_meta() {
     fi
 
     for ID in $KERNEL_ID $RAMDISK_ID $MACHINE_ID; do
-        GLANCE_SHOW=`glance -A $TOKEN show $ID`
+        GLANCE_SHOW=$(glance -A $TOKEN show $ID)
         # first check the image is not zero bytes
         if [[ "$(echo "$GLANCE_SHOW" | grep Size|cut -d' ' -f2)" -eq "0" ]]; then
             echo "The $ID image is zero bytes"
@@ -172,6 +170,38 @@ function 030_show_meta() {
 
 }
 
+function 035_show_index() {
+
+    # let's get the image numbers we're dealing with here
+    if [[ -f $IMAGE_DIR/$IMAGES_FILE ]]; then
+        source $IMAGE_DIR/$IMAGES_FILE
+    else
+        echo "there was no $IMAGES_FILE file"
+        exit 1
+    fi
+
+    # glance does not nicely detect non-interactive mode so we
+    # need to force it to show the full index (without paging)
+    # by enforcing an artifically high limit
+    GLANCE_INDEX=$(glance -A $TOKEN --limit 200 index)
+
+    # check that we can see our images in the index listing
+    # first check we got a normal header from glance index
+    if echo $GLANCE_INDEX | grep -e '^ID'; then
+        # then check that our images are there
+        for ID in $KERNEL_ID $MACHINE_ID $RAMDISK_ID; do
+            if ! echo $GLANCE_INDEX | grep -e "$ID"; then
+                echo "Could not see image id $ID in the glance index"
+                exit 1
+            fi
+        done
+    else
+        echo "We don't appear to have got a normal response from glance index:"
+        echo "$GLANCE_INDEX"
+        exit 1
+    fi
+    
+}
 
 function 040_update_metadata() {
 
@@ -181,6 +211,22 @@ function 040_update_metadata() {
     else
         echo "there was no $IMAGES_FILE file"
         exit 1
+    fi
+
+    # probably just need to update the metadata on just one of our images
+    glance -A $TOKEN update $RAMDISK_ID is_public=false
+    # check it's been update with glance show $RAMDISK_ID
+    if ! glance -A $TOKEN show $RAMDISK_ID|grep 'Public: No'; then
+    echo "metadata did not get updated correctly"
+    exit 1
+    fi
+
+    # now put it back the way it was
+    glance -A $TOKEN update $RAMDISK_ID is_public=true
+    # check it's been update with glance show $RAMDISK_ID
+    if ! glance -A $TOKEN show $RAMDISK_ID|grep 'Public: Yes'; then
+    echo "metadata did not get updated correctly"
+    exit 1
     fi
 
 }
