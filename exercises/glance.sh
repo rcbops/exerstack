@@ -3,21 +3,20 @@
 
 
 function 010_upload_image() {
-
     # Create a directory for the downloaded image tarballs.
     if ! mkdir -p $IMAGE_DIR/$UNTARRED_IMAGES; then
 	echo "could not make directory"
     fi
    
     # we'll use ami-tty as our test image
-    if [[ ! -f $IMAGE_DIR/${IMAGE}.tgz ]]; then
-        wget -q -c $IMAGE_URL -O $IMAGE_DIR/$IMAGE.tgz
+    if [[ ! -f $IMAGE_DIR/$IMAGE_BASENAME ]]; then
+        wget -q -c $IMAGE_URL -O $IMAGE_DIR/$IMAGE_BASENAME
     fi
    
     # untar the image
-    tar -zxf $IMAGE_DIR/$IMAGE.tgz -C $IMAGE_DIR/$UNTARRED_IMAGES
+    tar -zxf $IMAGE_DIR/$IMAGE_BASENAME -C $IMAGE_DIR/$UNTARRED_IMAGES
 
-    # zero the image_numbers file to make sure the delete 
+    # null the image_numbers file to make sure the delete 
     # function doesn't try and delete old images if we bomb out of this
     # function early
     >$IMAGE_DIR/$IMAGES_FILE
