@@ -148,7 +148,7 @@ for d in ${BASEDIR}/exercises/*.sh; do
 #	    eval "(set -e; set -x; ${test}; set +x; set +e); status=\$?" >> ${TMPDIR}/test.txt 2>&1
 
 	    set -E
-	    trap "echo booger; trap - ERR; status=1; return 1" ERR
+	    trap "trap - ERR; status=1; return 1" ERR
 	    status=0
 	    eval "set -x; ${test}; set +x" >> ${TMPDIR}/test.txt 2>&1
 	    trap - ERR
