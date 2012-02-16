@@ -21,7 +21,7 @@ function 010_add_tenant() {
 keystone-manage tenant add $KS_TEST_TENANT
 
 # is it really there?
-if ! keystone-manage tenant list|grep $KS_TEST_TENANT|cut -f2; then
+if ! keystone-manage tenant list|grep $KS_TEST_TENANT; then
     echo "can't see $KS_TEST_TENANT in the tenant list output"
     exit 1
 fi
@@ -34,7 +34,7 @@ function 020_add_user() {
 keystone-manage user add $KS_TEST_USER $KS_TEST_PASS
 
 # is it really there?
-if ! keystone-manage user list|grep $KS_TEST_USER|cut -f2; then
+if ! keystone-manage user list|grep $KS_TEST_USER; then
     echo "can't see $KS_TEST_USER in the user list output"
     exit 1
 fi
@@ -47,7 +47,7 @@ function 030_add_role() {
 keystone-manage role add $KS_TEST_ROLE
 
 # is it really there?
-if ! keystone-manage role list|grep $KS_TEST_ROLE|cut -f2; then
+if ! keystone-manage role list|grep $KS_TEST_ROLE; then
     echo "can't see $KS_TEST_ROLE in the role list output"
     exit 1
 fi
@@ -67,7 +67,7 @@ function 040_add_token() {
 keystone-manage token add $KS_TEST_TOKEN $KS_TEST_USER $KS_TEST_TENANT "2015-02-05T00:00"
 
 # is it really there?
-if ! keystone-manage token list|grep $KS_TEST_TOKEN|cut -f1; then
+if ! keystone-manage token list|grep $KS_TEST_TOKEN; then
     echo "can't see $KS_TEST_TOKEN in the token list output"
     exit 1
 fi
@@ -80,7 +80,7 @@ function 050_add_service() {
 keystone-manage service add $KS_TEST_SERVICE test
 
 # is it really there?
-if ! keystone-manage service list|grep $KS_TEST_SERVICE|cut -f2; then
+if ! keystone-manage service list|grep $KS_TEST_SERVICE; then
     echo "can't see $KS_TEST_SERVICE in the role list output"
     exit 1
 fi
