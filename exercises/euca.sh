@@ -21,13 +21,18 @@ function setup() {
 
 }
 
+function teardown() {
+
+}
+
+
 function 010_add_secgroup() {
     # Add a secgroup
     if ! euca-describe-group | grep -q $SECGROUP; then
         euca-add-group -d "$SECGROUP description" $SECGROUP
         if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! euca-describe-group | grep -q $SECGROUP; do sleep 1; done"; then
             echo "Security group not created"
-            exit 1
+	    return 1
         fi
     fi
 }
@@ -40,7 +45,7 @@ function 020_launch_instance() {
     # Assure it has booted within a reasonable time
     if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $INSTANCE | grep -q running; do sleep 1; done"; then
         echo "server didn't become active within $RUNNING_TIMEOUT seconds"
-        exit 1
+	return 1
     fi
 }
 
@@ -57,24 +62,31 @@ function 030_associate_floating_ip() {
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done"; then
         echo "Couldn't ping server with floating ip"
-	exit 1
+	return 1
     fi
 }
 
-function 040_secgroup_restrictions() {
-    # Revoke pinging
-    euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
-
-    # Delete group
-    euca-delete-group $SECGROUP
-
+function 040_disassociate_floating_ip() {
     # Release floating address
     euca-disassociate-address $FLOATING_IP
 
     # Wait just a tick for everything above to complete so release doesn't fail
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-addresses | grep $INSTANCE | grep -q $FLOATING_IP; do sleep 1; done"; then
         echo "Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds"
-        exit 1
+	return 1
+    fi
+}
+
+function 050_remove_security_group() {
+    # Revoke pinging
+    euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
+
+    # Delete group
+    euca-delete-group $SECGROUP
+
+    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-group | grep -q $SECGROUP; do sleep 1; done"; then
+        echo "Security group not deleted"
+	return 1
     fi
 }
 
@@ -85,7 +97,7 @@ function 050_release_floating() {
     # Wait just a tick for everything above to complete so terminate doesn't fail
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-addresses | grep -q $FLOATING_IP; do sleep 1; done"; then
         echo "Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds"
-        exit 1
+	return 1
     fi
 }
 
