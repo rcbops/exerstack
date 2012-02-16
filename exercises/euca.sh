@@ -20,9 +20,11 @@ function setup() {
     SECGROUP=euca_secgroup
 
 }
-function 005_something() {
-    booger
+
+function teardown() {
+
 }
+
 
 function 010_add_secgroup() {
     # Add a secgroup
@@ -64,19 +66,26 @@ function 030_associate_floating_ip() {
     fi
 }
 
-function 040_secgroup_restrictions() {
-    # Revoke pinging
-    euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
-
-    # Delete group
-    euca-delete-group $SECGROUP
-
+function 040_disassociate_floating_ip() {
     # Release floating address
     euca-disassociate-address $FLOATING_IP
 
     # Wait just a tick for everything above to complete so release doesn't fail
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-addresses | grep $INSTANCE | grep -q $FLOATING_IP; do sleep 1; done"; then
         echo "Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds"
+	return 1
+    fi
+}
+
+function 050_remove_security_group() {
+    # Revoke pinging
+    euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
+
+    # Delete group
+    euca-delete-group $SECGROUP
+
+    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-group | grep -q $SECGROUP; do sleep 1; done"; then
+        echo "Security group not deleted"
 	return 1
     fi
 }

@@ -111,6 +111,15 @@ echo "Running test suite for packageset \"${PACKAGESET}\""
 for d in ${BASEDIR}/exercises/*.sh; do
     testname=$(basename ${d} .sh)
 
+    echo -e "\n=== ${testname} ===\n"
+
+    if ( ! /bin/bash -n ${d} > /dev/null 2>&1 ); then
+	colourise red -n "Compile error in ${d}"
+	echo
+	FAILED=$(( ${FAILED} + 1 ))
+	continue
+    fi
+
     source ${d}
     if $(set | grep -q 'setup ()'); then
 	# not in a subshell, so globals can be modified
@@ -121,7 +130,6 @@ for d in ${BASEDIR}/exercises/*.sh; do
     set | grep ' ()' | cut -d' ' -f1 | sort > ${TMPDIR}/fn_post.txt
 
     fnlist=$(comm -23 ${TMPDIR}/fn_post.txt ${TMPDIR}/fn_pre.txt)
-    echo -e "\n=== ${testname} ===\n"
 
     # run each test
     for test in ${fnlist}; do
@@ -138,7 +146,13 @@ for d in ${BASEDIR}/exercises/*.sh; do
 	    echo "=== TEST: ${testname}/${test} ===" > ${TMPDIR}/test.txt
 
 #	    eval "(set -e; set -x; ${test}; set +x; set +e); status=\$?" >> ${TMPDIR}/test.txt 2>&1
-	    eval "set -e; set -x; ${test}; set +x; set +e; status=\$?" >> ${TMPDIR}/test.txt 2>&1
+
+	    set -E
+	    trap "echo booger; trap - ERR; status=1; return 1" ERR
+	    status=0
+	    eval "set -x; ${test}; set +x" >> ${TMPDIR}/test.txt 2>&1
+	    trap - ERR
+	    set +E
 
 	    end=$(date +%s.%N)
 
@@ -190,7 +204,7 @@ echo -n "Skipped: "
 colourise boldyellow ${SKIPPED}
 
 echo
-if [ "$FAILED" -ne "0" ]; then
+if [ "$FAILED" -ne "0" ] && [ -e ${TMPDIR}/notice.txt ]; then
     colourise red ERROR TEST OUTPUT
     cat ${TMPDIR}/notice.txt
     exit 1
