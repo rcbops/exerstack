@@ -159,9 +159,4 @@ function teardown() {
   mysql -uroot ${PW} -e "DELETE from keystone.roles WHERE name='$KS_TEST_ROLE'"
   mysql -uroot ${PW} -e "DELETE from keystone.services WHERE name='$KS_TEST_SERVICE'"
   mysql -uroot ${PW} -e "DELETE from keystone.endpoint_templates WHERE region='$KS_TEST_REGION'"
-
-  # amazing - we can actually delete the token with km
-  if keystone-manage token list|grep $KS_TEST_TOKEN; then
-    keystone-manage token delete $KS_TEST_TOKEN
-  fi
 }
