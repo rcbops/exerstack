@@ -38,7 +38,6 @@ boldwhite='\033[1;37m'
 TMPDIR=$(mktemp -d)
 trap "rm -rf ${TMPDIR}" EXIT
 
-
 COLSIZE=40
 
 function should_run() {
@@ -158,6 +157,11 @@ for d in ${BASEDIR}/exercises/*.sh; do
 
 	    elapsed=$(echo "${end}-${start}*100/100" | bc -q 2> /dev/null)
 	    result="OK"
+
+	    if [ "${DEBUG-}" != "" ]; then
+		cat ${TMPDIR}/test.txt >> ${TMPDIR}/debug.txt
+	    fi
+
 	    if [ ${status} -ne 0 ]; then
 		resultcolour="red"
 		result="FAIL"
@@ -204,6 +208,10 @@ echo -n "Skipped: "
 colourise boldyellow ${SKIPPED}
 
 echo
+[ -e ${TMPDIR}/debug.txt ] && cat ${TMPDIR}/debug.txt
+
+echo
+
 if [ "$FAILED" -ne "0" ] && [ -e ${TMPDIR}/notice.txt ]; then
     colourise red ERROR TEST OUTPUT
     cat ${TMPDIR}/notice.txt

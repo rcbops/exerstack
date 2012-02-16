@@ -13,48 +13,59 @@ function setup() {
     # Instance type to create
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
 
+    # Keypair to make
+    EUCA_KEYPAIR=${EUCA_KEYPAIR:-euca_test_keypair}
+
     # Find an image to spin
-    IMAGE=$(euca-describe-images | grep machine | cut -f2 | head -n1)
+    EUCA_IMAGE=$(euca-describe-images | grep machine | cut -f2 | head -n1)
 
     # Define secgroup
-    SECGROUP=euca_secgroup
+    EUCA_SECGROUP=euca_secgroup
 
 }
 
 
 function 010_add_secgroup() {
     # Add a secgroup
-    if ! euca-describe-group | grep -q $SECGROUP; then
-        euca-add-group -d "$SECGROUP description" $SECGROUP
-        if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! euca-describe-group | grep -q $SECGROUP; do sleep 1; done"; then
+    if ! euca-describe-group | grep -q $EUCA_SECGROUP; then
+        euca-add-group -d "$EUCA_SECGROUP description" $EUCA_SECGROUP
+        if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! euca-describe-group | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
             echo "Security group not created"
 	    return 1
         fi
     fi
 }
 
-function 015_apply_secgroup_rule() {
-    # Authorize pinging
-    euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
+function 020_apply_secgroup_rule() {
+    # Authorize pinging & ssh
+    euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 ${EUCA_SECGROUP}
+    euca-authorize -P tcp -s 0.0.0.0/0 -p 22-22 ${EUCA_SECGROUP}
 }
 
-function 020_launch_instance() {
+function 030_generate_keypair() {
+    # throw down some pemmage
+    euca-add-keypair ${EUCA_KEYPAIR} > ${TMPDIR}/${EUCA_KEYPAIR}.pem
+    chmod 600 ${TMPDIR}/${EUCA_KEYPAIR}.pem
+}
+
+
+function 040_launch_instance() {
     # Launch it
-    INSTANCE=$(euca-run-instances -g $SECGROUP -t $DEFAULT_INSTANCE_TYPE $IMAGE | grep INSTANCE | cut -f2)
+    EUCA_INSTANCE=$(euca-run-instances -k ${EUCA_KEYPAIR} -g $EUCA_SECGROUP -t $DEFAULT_INSTANCE_TYPE $EUCA_IMAGE | grep INSTANCE | cut -f2)
 
     # Assure it has booted within a reasonable time
-    if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $INSTANCE | grep -q running; do sleep 1; done"; then
+    if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $EUCA_INSTANCE | grep -q running; do sleep 1; done"; then
         echo "server didn't become active within $RUNNING_TIMEOUT seconds"
 	return 1
     fi
 }
 
-function 030_associate_floating_ip() {
+function 050_associate_floating_ip() {
     # Allocate floating address
     FLOATING_IP=`euca-allocate-address | cut -f2`
 
     # Associate floating address
-    euca-associate-address -i $INSTANCE $FLOATING_IP
+    euca-associate-address -i $EUCA_INSTANCE $FLOATING_IP
 
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done"; then
@@ -63,33 +74,49 @@ function 030_associate_floating_ip() {
     fi
 }
 
-function 040_disassociate_floating_ip() {
+function 055_verify_ssh_key() {
+    # wait for 22 to become available
+    if ! timeout 30 sh -c "while ! nc ${FLOATING_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+	echo "port 22 never became available"
+	return 1
+    fi
+
+    timeout 30 ssh ${FLOATING_IP} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+}
+
+function 060_disassociate_floating_ip() {
     # Release floating address
     euca-disassociate-address $FLOATING_IP
 
     # Wait just a tick for everything above to complete so release doesn't fail
-    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-addresses | grep $INSTANCE | grep -q $FLOATING_IP; do sleep 1; done"; then
+    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-addresses | grep $EUCA_INSTANCE | grep -q $FLOATING_IP; do sleep 1; done"; then
         echo "Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds"
 	return 1
     fi
 }
 
-function 045_revoke_secgroup_rule() {
-    # Revoke pinging
-    euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
+function 065_delete_keypair() {
+    # remove pem pair
+    euca-delete-keypair ${EUCA_KEYPAIR}
 }
 
-function 050_remove_security_group() {
-    # Delete group
-    euca-delete-group $SECGROUP
+function 070_revoke_secgroup_rule() {
+    # Revoke pinging & ssh
+    euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 ${EUCA_SECGROUP}
+    euca-revoke -P tcp -s 0.0.0.0/0 -p 22-22 ${EUCA_SECGROUP}
+}
 
-    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-group | grep -q $SECGROUP; do sleep 1; done"; then
+function 080_remove_security_group() {
+    # Delete group
+    euca-delete-group $EUCA_SECGROUP
+
+    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-group | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
         echo "Security group not deleted"
 	return 1
     fi
 }
 
-function 050_release_floating() {
+function 090_release_floating() {
     # Release floating address
     euca-release-address $FLOATING_IP
 
@@ -100,7 +127,7 @@ function 050_release_floating() {
     fi
 }
 
-function 060_terminate_instance() {
+function 100_terminate_instance() {
     # Terminate instance
-    euca-terminate-instances $INSTANCE
+    euca-terminate-instances $EUCA_INSTANCE
 }
