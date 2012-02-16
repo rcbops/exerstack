@@ -21,7 +21,7 @@ function 010_add_tenant() {
   # is it really there?
   if ! keystone-manage tenant list|grep $KS_TEST_TENANT; then
     echo "can't see $KS_TEST_TENANT in the tenant list output"
-    exit 1
+    return 1
   fi
 }
 
@@ -33,7 +33,7 @@ function 020_add_user() {
   # is it really there?
   if ! keystone-manage user list|grep $KS_TEST_USER; then
     echo "can't see $KS_TEST_USER in the user list output"
-    exit 1
+    return 1
   fi
 }
 
@@ -45,7 +45,7 @@ function 030_add_token() {
   # is it really there?
   if ! keystone-manage token list|grep $KS_TEST_TOKEN; then
     echo "can't see $KS_TEST_TOKEN in the token list output"
-    exit 1
+    return 1
   fi
 }
 
@@ -57,7 +57,7 @@ function 040_add_role() {
   # is it really there?
   if ! keystone-manage role list|grep $KS_TEST_ROLE; then
     echo "can't see $KS_TEST_ROLE in the role list output"
-    exit 1
+    return 1
   fi
 }
 
@@ -93,7 +93,7 @@ function 060_add_service() {
   # is it really there?
   if ! keystone-manage service list|grep $KS_TEST_SERVICE; then
     echo "can't see $KS_TEST_SERVICE in the role list output"
-    exit 1
+    return 1
   fi
 }
 
@@ -123,6 +123,14 @@ function 081_disable_tenant() {
   keystone-manage tenant disable $KS_TEST_TENANT
   if [ $(keystone-manage tenant list|grep $KS_TEST_TENANT|cut -f 3) -ne 0 ]; then
     echo "$KS_TEST_TENANT has not been disabled"
+    return 1
+  fi
+}
+
+
+function 090_delete_token() {
+  if ! keystone-manage token delete $KS_TEST_TOKEN; then
+    echo "unable to delete $KS_TEST_TOKEN"
     return 1
   fi
 }
