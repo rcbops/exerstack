@@ -33,6 +33,10 @@ function 010_add_secgroup() {
     fi
 }
 
+function 015_apply_secgroup_rule() {
+    # Authorize pinging
+    euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
+}
 
 function 020_launch_instance() {
     # Launch it
@@ -52,9 +56,6 @@ function 030_associate_floating_ip() {
     # Associate floating address
     euca-associate-address -i $INSTANCE $FLOATING_IP
 
-    # Authorize pinging
-    euca-authorize -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
-
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done"; then
         echo "Couldn't ping server with floating ip"
@@ -73,10 +74,12 @@ function 040_disassociate_floating_ip() {
     fi
 }
 
-function 050_remove_security_group() {
+function 045_revoke_secgroup_rule() {
     # Revoke pinging
     euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 $SECGROUP
+}
 
+function 050_remove_security_group() {
     # Delete group
     euca-delete-group $SECGROUP
 
