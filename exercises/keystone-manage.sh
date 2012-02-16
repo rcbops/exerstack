@@ -10,7 +10,10 @@ function setup() {
   KS_TEST_PASS=${KS_TEST_PASS:-"exerPass"}
   KS_TEST_SERVICE=${KS_TEST_SERVICE:-"exerService"}
   KS_TEST_REGION=${KS_TEST_REGION:-"exerRegion"}
-  MYSQL_PASS=${MYSQL_PASS:-'secrete'}
+  MYSQL_PASS=${MYSQL_PASS-'secrete'}
+
+  # we'll pre-clean
+  teardown
 }
 
 
@@ -139,17 +142,23 @@ function 090_delete_token() {
 function teardown() {
   # so, yeah, we can't use keystone-manage to delete the cruft we
   # created. direct db manipulation ftw
+  if [ "${MYSQL_PASS}" == "" ]; then
+      PW=""
+  else
+      PW="-p${MYSQL_PASS}"
+  fi
 
   USER_ID=$(keystone-manage user list | grep $KS_TEST_USER|cut -f1)
   TENANT_ID=$(keystone-manage tenant list | grep $KS_TEST_TENANT| cut -f1)
   ROLE_ID=$(keystone-manage role list | grep $KS_TEST_ROLE | cut -f1)
-  mysql -uroot -p$MYSQL_PASS -e "DELETE from keystone.user_roles WHERE user_id='$USER_ID'"
-  mysql -uroot -p$MYSQL_PASS -e "DELETE from keystone.users WHERE name='$KS_TEST_USER'"
-  mysql -uroot -p$MYSQL_PASS -e "DELETE from keystone.tenants WHERE name='$KS_TEST_TENANT'"
-  mysql -uroot -p$MYSQL_PASS -e "DELETE from keystone.credentials WHERE user_id='$USER_ID'"
-  mysql -uroot -p$MYSQL_PASS -e "DELETE from keystone.roles WHERE name='$KS_TEST_ROLE'"
-  mysql -uroot -p$MYSQL_PASS -e "DELETE from keystone.services WHERE name='$KS_TEST_SERVICE'"
-  mysql -uroot -p$MYSQL_PASS -e "DELETE from keystone.endpoint_templates WHERE region='$KS_TEST_REGION'"
+
+  mysql -uroot ${PW} -e "DELETE from keystone.user_roles WHERE user_id='$USER_ID'"
+  mysql -uroot ${PW} -e "DELETE from keystone.users WHERE name='$KS_TEST_USER'"
+  mysql -uroot ${PW} -e "DELETE from keystone.tenants WHERE name='$KS_TEST_TENANT'"
+  mysql -uroot ${PW} -e "DELETE from keystone.credentials WHERE user_id='$USER_ID'"
+  mysql -uroot ${PW} -e "DELETE from keystone.roles WHERE name='$KS_TEST_ROLE'"
+  mysql -uroot ${PW} -e "DELETE from keystone.services WHERE name='$KS_TEST_SERVICE'"
+  mysql -uroot ${PW} -e "DELETE from keystone.endpoint_templates WHERE region='$KS_TEST_REGION'"
 
   # amazing - we can actually delete the token with km
   if keystone-manage token list|grep $KS_TEST_TOKEN; then
