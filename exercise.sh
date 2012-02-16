@@ -123,7 +123,7 @@ for d in ${BASEDIR}/exercises/*.sh; do
     source ${d}
     if $(set | grep -q 'setup ()'); then
 	# not in a subshell, so globals can be modified
-	setup
+	setup > /dev/null 2>&1
     fi
 
     # find all the functions defined in the newly sourced file.
@@ -184,7 +184,7 @@ for d in ${BASEDIR}/exercises/*.sh; do
     done
 
     if $(set | grep -q 'teardown ()'); then
-	teardown
+	teardown > /dev/null 2>&1
     fi
 
     # undefine the tests

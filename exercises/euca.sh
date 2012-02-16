@@ -21,10 +21,6 @@ function setup() {
 
 }
 
-function teardown() {
-
-}
-
 
 function 010_add_secgroup() {
     # Add a secgroup
