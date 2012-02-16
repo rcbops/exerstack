@@ -119,6 +119,7 @@ for d in ${BASEDIR}/exercises/*.sh; do
 
     # find all the functions defined in the newly sourced file.
     set | grep ' ()' | cut -d' ' -f1 | sort > ${TMPDIR}/fn_post.txt
+
     fnlist=$(comm -23 ${TMPDIR}/fn_post.txt ${TMPDIR}/fn_pre.txt)
     echo -e "\n=== ${testname} ===\n"
 
@@ -136,7 +137,8 @@ for d in ${BASEDIR}/exercises/*.sh; do
 
 	    echo "=== TEST: ${testname}/${test} ===" > ${TMPDIR}/test.txt
 
-	    eval "(set -e; set -x; ${test}; set +x; set +e); status=\$?" >> ${TMPDIR}/test.txt 2>&1
+#	    eval "(set -e; set -x; ${test}; set +x; set +e); status=\$?" >> ${TMPDIR}/test.txt 2>&1
+	    eval "set -e; set -x; ${test}; set +x; set +e; status=\$?" >> ${TMPDIR}/test.txt 2>&1
 
 	    end=$(date +%s.%N)
 
