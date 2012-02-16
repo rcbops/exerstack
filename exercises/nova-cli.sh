@@ -14,10 +14,16 @@ function setup() {
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
 
     # Find an image to spin
-    IMAGE=$(nova image-list|egrep $DEFAULT_IMAGE_NAME|head -1|cut -d" " -f1)
+    IMAGE=$(nova image-list|egrep $DEFAULT_IMAGE_NAME|head -1|cut -d" " -f2)
+
+    # Find the instance type ID
+    INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
 
     # Define secgroup
     SECGROUP=${SECGROUP:-test_nova_cli_secgroup}
+
+    # Define a source_secgroup
+    SOURCE_SECGROUP=${SOURCE_SECGROUP:-default}
 
     # Boot this image, use first AMi image if unset
     DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-server}
@@ -39,7 +45,6 @@ function teardown() {
 #    boot                Boot a new server.
 #    delete              Immediately shut down and delete a server.
 #    diagnostics         Retrieve server diagnostics.
-#    flavor-list         Print a list of available 'flavors' (sizes of
 #                        servers).
 #    floating-ip-create  Allocate a floating IP for the current tenant.
 #    floating-ip-delete  De-allocate a floating IP.
@@ -103,6 +108,13 @@ function 010_nova_image-list() {
   fi
 }
 
+function 011_nova_flavor-list() {
+  if ! nova flavor-list|egrep $DEFAULT_INSTANCE_TYPE; then
+    echo "Unable to find DEFAULT_INSTANCE_TYPE"
+    return 1
+  fi
+}
+
 function 020_nova_secgroup-create() {
   # usage: nova secgroup-create <name> <description>
   if ! nova secgroup-list|grep $SECGROUP; then
@@ -117,13 +129,33 @@ function 020_nova_secgroup-create() {
   fi
 }
 
-function 025_nova_secgroup-add-rule() {
+function 021_nova_secgroup-add-rule() {
   # usage: nova secgroup-add-rule <secgroup> <ip_proto> <from_port> <to_port> <cidr>
   nova secgroup-add-rule $SECGROUP icmp -1 -1 0.0.0.0/0
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep icmp; do sleep 1; done"; then
     echo "Security group rule not added"
     return 1
   fi 
+}
+
+function 022_nova-secgroup-add-group-rule() {
+  # usage: nova secgroup-add-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
+  #                                      [--to_port <to_port>] <secgroup> <source_group>
+  nova secgroup-add-group-rule --ip_proto tcp --from_port 22 --to_port 22 $SECGROUP $SOURCE_SECGROUP
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
+    echo "Security group rule not added"
+    return 1
+  fi
+}
+
+function 997_nova_secgroup-delete-group-rule() {
+  # usage: nova secgroup-delete-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
+  #                                     [--to_port <to_port>] <secgroup> <source_group>
+  nova secgroup-delete-group-rule --ip_proto tcp --from_port 22 --to_port 22 $SECGROUP $SOURCE_SECGROUP
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
+    echo "Security group rule not added"
+    return 1
+  fi
 }
 
 function 998_nova_secgroup-delete-rule() {
@@ -142,5 +174,4 @@ function 999_nova_secgroup-delete() {
     echo "Security group not deleted"
     return 1
   fi
-  
 }
