@@ -128,7 +128,7 @@ function 081_disable_tenant() {
 }
 
 
-function cleanup() {
+function teardown() {
   # so, yeah, we can't use keystone-manage to delete the cruft we
   # created. direct db manipulation ftw
 
