@@ -10,23 +10,26 @@ function setup() {
     # Max time to wait for proper association and dis-association.
     ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-15}
 
+    # Instance name
+    DEFAULT_INSTANCE_NAME=${DEFAULT_INSTANCE_NAME:-test_nova_cli_instance}
+
     # Instance type to create
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
-
-    # Find an image to spin
-    IMAGE=$(nova image-list|egrep $DEFAULT_IMAGE_NAME|head -1|cut -d" " -f2)
+    
+    # Boot this image, use first AMi image if unset
+    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-server}
 
     # Find the instance type ID
     INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
+
+    # Find an image to spin
+    IMAGE=$(nova image-list|egrep $DEFAULT_IMAGE_NAME|head -1|cut -d" " -f2)
 
     # Define secgroup
     SECGROUP=${SECGROUP:-test_nova_cli_secgroup}
 
     # Define a source_secgroup
     SOURCE_SECGROUP=${SOURCE_SECGROUP:-default}
-
-    # Boot this image, use first AMi image if unset
-    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-server}
 
     # Default floating IP pool name
     DEFAULT_FLOATING_POOL=${DEFAULT_FLOATING_POOL:-nova}
@@ -51,17 +54,11 @@ function teardown() {
 #    delete              Immediately shut down and delete a server.
 #    diagnostics         Retrieve server diagnostics.
 #                        servers).
-#    floating-ip-create  Allocate a floating IP for the current tenant.
-#    floating-ip-delete  De-allocate a floating IP.
-#    floating-ip-list    List floating ips for this tenant.
 #    image-create        Create a new image by taking a snapshot of a running
 #                        server.
 #    image-delete        Delete an image.
 #    image-meta          Set or Delete metadata on an image.
 #    image-show          Show details about the given image.
-#    keypair-add         Create a new key pair for use with instances
-#    keypair-delete      Delete keypair by its id
-#    keypair-list        Print a list of keypairs for a user
 #    list                List active servers.
 #    meta                Set or Delete metadata on a server.
 #    migrate             Migrate a server.
@@ -109,6 +106,33 @@ function 011_nova_flavor-list() {
   fi
 }
 
+function 012_shared_key-nova_keypair-add() {
+  # usage: nova keypair-add [--pub_key <pub_key>] <name>
+  nova keypair-add --pub_key $SHARED_PUB_KEY $SHARED_KEY_NAME
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
+    echo "Keypair $SHARED_PRIV_KEY not imported"
+    return 1
+  fi
+}
+
+function 013_verify_fingerprints_match() {
+  FILE_FINGERPRINT=$(ssh-keygen -lf $SHARED_PUB_KEY | cut -d" " -f2)
+  NOVA_FINGERPRINT=$(nova keypair-list | grep $SHARED_KEY_NAME | cut -d" " -f4)
+  if [ ${NOVA_FINGERPRINT} != ${FILE_FINGERPRINT} ]; then
+    echo "Imported fingerprint does not match file fingerprint"
+    return 1
+  fi
+}
+
+function 014_shared_key-nova-keypair-delete() {
+  # usage: nova keypair-delete <name>
+  nova keypair-delete $SHARED_KEY_NAME
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
+    echo "Keypair $SHARED_KEY_NAME not deleted"
+    return 1
+  fi
+}
+
 function 020_nova_secgroup-create() {
   # usage: nova secgroup-create <name> <description>
   if ! nova secgroup-list|grep $SECGROUP; then
@@ -149,9 +173,9 @@ function 022_nova_secgroup-add-group-rule() {
 
 function 030_nova_keypair-add() {
   # usage: nova keypair-add [--pub_key <pub_key>] <name>
-  nova keypair-add $TEST_KEY_NAME > $TEST_PRIV_KEY
-  if [ -e $TEST_PRIV_KEY ]; then
-    chmod 600 $TEST_PRIV_KEY
+  nova keypair-add $TEST_KEY_NAME > $TMPDIR/$TEST_PRIV_KEY
+  if [ -e $TMPDIR/$TEST_PRIV_KEY ]; then
+    chmod 600 $TMPDIR/$TEST_PRIV_KEY
   else
     echo "Private key $TEST_PRIV_KEY not redirected to file"
     return 1
@@ -162,20 +186,27 @@ function 030_nova_keypair-add() {
   fi
 }
 
-function 031_nova_keypair-add--pub_key() {
-  # usage: nova keypair-add [--pub_key <pub_key>] <name>
-  nova keypair-add --pub_key $SHARED_PUB_KEY $SHARED_KEY_NAME
-  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
-    echo "Keypair $SHARED_PRIV_KEY not imported"
+function 040_nova-boot() {
+  # usage: nova boot [--flavor <flavor>] [--image <image>] [--meta <key=value>] [--file <dst-path=src-path>] 
+  #                  [--key_path [<key_path>]] [--key_name <key_name>] [--user_data <user-data>]
+  #                  [--availability_zone <availability-zone>] [--security_groups <security_groups>]
+  #                  <name>
+  echo ${IMAGE}
+  nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_name ${TEST_KEY_NAME} --security_groups ${SECGROUP} ${DEFAULT_INSTANCE_NAME}
+  if ! timeout $BOOT_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
+    echo "Instance ${DEFAULT_INSTANCE_NAME} failed to boot"
     return 1
   fi
 }
 
-function 995_nova_keypair-delete--pub_key() {
-  # usage: nova keypair-delete <name>
-  nova keypair-delete $SHARED_KEY_NAME
-  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
-    echo "Keypair $SHARED_KEY_NAME not deleted"
+#####
+
+function 995_nova-delete() {
+  # usage: nova delete <server>
+  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
+  nova delete ${INSTANCE_ID}
+  if ! timeout $BOOT_TIMEOUT sh -c "while nova list | grep ${INSTANCE_ID}; do sleep 1; done"; then
+    echo "Unable to delete instance: ${DEFAULT_INSTANCE_NAME}"
     return 1
   fi
 }
@@ -183,8 +214,8 @@ function 995_nova_keypair-delete--pub_key() {
 function 996_nova_keypair-delete() {
   # usage: nova keypair-delete <name>
   nova keypair-delete $TEST_KEY_NAME
-  if [ -e $TEST_PRIV_KEY ]; then
-    rm $TEST_PRIV_KEY
+  if [ -e $TMPDIR/$TEST_PRIV_KEY ]; then
+    rm $TMPDIR/$TEST_PRIV_KEY
   fi
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova keypair-list | grep $TEST_KEY_NAME; do sleep 1; done"; then
     echo "Keypair $TEST_PRIVATE_KEY not deleted"
