@@ -51,7 +51,7 @@ function teardown() {
 #    add-fixed-ip        Add new IP address to network.
 #    add-floating-ip     Add a floating IP address to a server.
 #    boot                Boot a new server.
-#    delete              Immediately shut down and delete a server.
+	# still need to test the --file and --key_path/--key_name options
 #    diagnostics         Retrieve server diagnostics.
 #                        servers).
 #    image-create        Create a new image by taking a snapshot of a running
@@ -193,19 +193,48 @@ function 040_nova-boot() {
   #                  <name>
   echo ${IMAGE}
   nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_name ${TEST_KEY_NAME} --security_groups ${SECGROUP} ${DEFAULT_INSTANCE_NAME}
-  if ! timeout $BOOT_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
     echo "Instance ${DEFAULT_INSTANCE_NAME} failed to boot"
     return 1
   fi
 }
 
-#####
+##### SPIN UP TESTS ####
 
-function 995_nova-delete() {
+function 300_nova-delete() {
   # usage: nova delete <server>
   INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
   nova delete ${INSTANCE_ID}
-  if ! timeout $BOOT_TIMEOUT sh -c "while nova list | grep ${INSTANCE_ID}; do sleep 1; done"; then
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${INSTANCE_ID}; do sleep 1; done"; then
+    echo "Unable to delete instance: ${DEFAULT_INSTANCE_NAME}"
+    return 1
+  fi
+}
+
+### Additional spin up tests ###
+
+function 400_custom_key-nova-boot() {
+  nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_path $SHARED_PUB_KEY ${DEFAULT_INSTANCE_NAME}
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
+    echo "Instance ${DEFAULT_INSTANCE_NAME} failed to boot"
+    return 1
+  fi
+}
+
+function_401_custom_key-verify_ssh_key() {
+  INSTANCE_IP=$(nova list | grep ${DEFAULT_INSTANCE_NAME}  | cut -d" " -f8 | sed -e 's/public=//g' | sed -e 's/;//g')
+  if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+    echo "port 22 never became available"
+    return 1
+  fi
+
+  timeout $ACTIVE_TIMEOUT ssh ${INSTANCE_IP} -i ${SHARED_PRIV_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+}
+
+function 499_custom_key-nova-delete() {
+  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
+  nova delete ${INSTANCE_ID}
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${INSTANCE_ID}; do sleep 1; done"; then
     echo "Unable to delete instance: ${DEFAULT_INSTANCE_NAME}"
     return 1
   fi
