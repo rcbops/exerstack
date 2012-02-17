@@ -21,7 +21,6 @@ function setup() {
 
     # Define secgroup
     EUCA_SECGROUP=euca_secgroup
-
 }
 
 
@@ -64,6 +63,13 @@ function 050_associate_floating_ip() {
     # Allocate floating address
     FLOATING_IP=`euca-allocate-address | cut -f2`
 
+    EUCA_HAS_FLOATING=1
+    if [ ${FLOATING_IP} = "Zero" ]; then
+	EUCA_HAS_FLOATING=0
+	SKIP_MSG="No floating IPs available"
+	return 99
+    fi
+
     # Associate floating address
     euca-associate-address -i $EUCA_INSTANCE $FLOATING_IP
 
@@ -76,7 +82,11 @@ function 050_associate_floating_ip() {
 
 function 055_verify_ssh_key() {
     # wait for 22 to become available
-    if ! timeout 30 sh -c "while ! nc ${FLOATING_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+    local ip=${FLOATING_IP}
+
+    [ $EUCA_HAS_FLOATING -eq 1 ] || ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+
+    if ! timeout 30 sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
 	echo "port 22 never became available"
 	return 1
     fi
@@ -85,6 +95,8 @@ function 055_verify_ssh_key() {
 }
 
 function 060_disassociate_floating_ip() {
+    [ $EUCA_HAS_FLOATING -eq 1 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return
+
     # Release floating address
     euca-disassociate-address $FLOATING_IP
 
@@ -117,6 +129,8 @@ function 080_remove_security_group() {
 }
 
 function 090_release_floating() {
+    [ $EUCA_HAS_FLOATING -eq 1 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return
+
     # Release floating address
     euca-release-address $FLOATING_IP
 

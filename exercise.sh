@@ -138,6 +138,8 @@ for d in ${BASEDIR}/exercises/*.sh; do
     	printf " %-${COLSIZE}s" "${test}"
 	SKIP_MSG=""
 
+	SKIP_TEST=0
+
 	if should_run ${testname} ${test}; then
 	    resultcolour="green"  # for you, darren :p
 	    start=$(date +%s.%N)
@@ -147,7 +149,7 @@ for d in ${BASEDIR}/exercises/*.sh; do
 #	    eval "(set -e; set -x; ${test}; set +x; set +e); status=\$?" >> ${TMPDIR}/test.txt 2>&1
 
 	    set -E
-	    trap "trap - ERR; status=1; return 1" ERR
+	    trap "status=\$?; trap - ERR; if [ ! -z \${FUNCNAME-} ]; then return \$status; fi" ERR
 	    status=0
 	    eval "set -x; ${test}; set +x" >> ${TMPDIR}/test.txt 2>&1
 	    trap - ERR
@@ -162,20 +164,24 @@ for d in ${BASEDIR}/exercises/*.sh; do
 		cat ${TMPDIR}/test.txt >> ${TMPDIR}/debug.txt
 	    fi
 
-	    if [ ${status} -ne 0 ]; then
+	    if [ ${status} -ne 0 ] && [ $SKIP_TEST -eq 0 ]; then
 		resultcolour="red"
-		result="FAIL"
+		result="FAIL (Error Code: $status)"
 		cat ${TMPDIR}/test.txt >> ${TMPDIR}/notice.txt
 		echo >> ${TMPDIR}/notice.txt
 
 		FAILED=$(( ${FAILED} + 1 ))
-	    else
+		colourise ${resultcolour} " ${result}"
+	    elif [ $SKIP_TEST -eq 0 ]; then
 		result=$(printf "%0.3fs" "${elapsed}")
 		PASSED=$(( ${PASSED} + 1 ))
+		colourise ${resultcolour} " ${result}"
 	    fi
-
-	    colourise ${resultcolour} " ${result}"
 	else
+	    SKIP_TEST=1
+	fi
+
+	if [ $SKIP_TEST -eq 1 ]; then
 	    colourise boldyellow -n " SKIP"
 	    if [ ! -z "${SKIP_MSG-}" ]; then
 		echo ": ${SKIP_MSG}"
