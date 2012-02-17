@@ -87,12 +87,12 @@ function 055_verify_ssh_key() {
 
     [ $EUCA_HAS_FLOATING -eq 1 ] || ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
 
-    if ! timeout 30 sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
 	echo "port 22 never became available"
 	return 1
     fi
 
-    timeout 30 ssh ${ip} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+    timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
 }
 
 function 060_disassociate_floating_ip() {
