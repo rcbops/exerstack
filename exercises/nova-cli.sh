@@ -33,6 +33,11 @@ function setup() {
 
     # Additional floating IP pool and range
     TEST_FLOATING_POOL=${TEST_FLOATING_POOL:-test}
+
+    # File name for generated keys
+    TEST_KEY_NAME=${TEST_KEY_NAME:-nova_test_key}
+    TEST_PRIV_KEY=${TEST_PRIV_KEY:-$TEST_KEY_NAME.pem}
+    # TEST_PUB_KEY=${TEST_PUB_KEY:-$TEST_KEY_NAME.pub}
 }
 
 function teardown() {
@@ -132,12 +137,57 @@ function 021_nova_secgroup-add-rule() {
   fi 
 }
 
-function 022_nova-secgroup-add-group-rule() {
+function 022_nova_secgroup-add-group-rule() {
   # usage: nova secgroup-add-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
   #                                      [--to_port <to_port>] <secgroup> <source_group>
   nova secgroup-add-group-rule --ip_proto tcp --from_port 80 --to_port 80 $SECGROUP $SOURCE_SECGROUP
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep $SOURCE_SECGROUP; do sleep 1; done"; then
     echo "Security group rule not added"
+    return 1
+  fi
+}
+
+function 030_nova_keypair-add() {
+  # usage: nova keypair-add [--pub_key <pub_key>] <name>
+  nova keypair-add $TEST_KEY_NAME > $TEST_PRIV_KEY
+  if [ -e $TEST_PRIV_KEY ]; then
+    chmod 600 $TEST_PRIV_KEY
+  else
+    echo "Private key $TEST_PRIV_KEY not redirected to file"
+    return 1
+  fi
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova keypair-list | grep $TEST_KEY_NAME; do sleep 1; done"; then
+    echo "Keypair $TEST_KEY_NAME not created"
+    return 1
+  fi
+}
+
+function 031_nova_keypair-add--pub_key() {
+  # usage: nova keypair-add [--pub_key <pub_key>] <name>
+  nova keypair-add --pub_key $SHARED_PUB_KEY $SHARED_KEY_NAME
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
+    echo "Keypair $SHARED_PRIV_KEY not imported"
+    return 1
+  fi
+}
+
+function 995_nova_keypair-delete--pub_key() {
+  # usage: nova keypair-delete <name>
+  nova keypair-delete $SHARED_KEY_NAME
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
+    echo "Keypair $SHARED_KEY_NAME not deleted"
+    return 1
+  fi
+}
+
+function 996_nova_keypair-delete() {
+  # usage: nova keypair-delete <name>
+  nova keypair-delete $TEST_KEY_NAME
+  if [ -e $TEST_PRIV_KEY ]; then
+    rm $TEST_PRIV_KEY
+  fi
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova keypair-list | grep $TEST_KEY_NAME; do sleep 1; done"; then
+    echo "Keypair $TEST_PRIVATE_KEY not deleted"
     return 1
   fi
 }

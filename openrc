@@ -85,3 +85,9 @@ export RUNNING_TIMEOUT=${RUNNING_TIMEOUT:-$(($BOOT_TIMEOUT + $ACTIVE_TIMEOUT))}
 
 # Max time to wait for proper IP association and dis-association.
 export ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-15}
+
+
+# Shared SSH Keys for testing
+export SHARED_KEY_NAME=${SHARED_KEY_NAME:-exerstack_shared_key}
+export SHARED_PRIV_KEY=${SHARED_PRIV_KEY:-exercises/include/$SHARED_KEY_NAME}
+export SHARED_PUB_KEY=${SHARED_PUB_KEY:-exercises/include/$SHARED_KEY_NAME.pub}
