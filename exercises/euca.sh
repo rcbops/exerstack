@@ -64,10 +64,11 @@ function 050_associate_floating_ip() {
     FLOATING_IP=`euca-allocate-address | cut -f2`
 
     EUCA_HAS_FLOATING=1
-    if [ ${FLOATING_IP} =~ "Zero" ]; then
+    if [[ ${FLOATING_IP} =~ "Zero" ]]; then
 	EUCA_HAS_FLOATING=0
-	SKIP_MSG="No floating IPs available"
-	return 99
+	SKIP_MSG="No floating ips"
+	SKIP_TEST=1
+	return 1
     fi
 
     # Associate floating address
@@ -91,7 +92,7 @@ function 055_verify_ssh_key() {
 	return 1
     fi
 
-    timeout 30 ssh ${FLOATING_IP} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+    timeout 30 ssh ${ip} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
 }
 
 function 060_disassociate_floating_ip() {
