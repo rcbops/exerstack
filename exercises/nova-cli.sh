@@ -73,15 +73,6 @@ function teardown() {
 #                        VM).
 #    resume              Resume a server.
 #    root-password       Change the root password for a server.
-#    secgroup-add-group-rule
-#                        Add a source group rule to a security group.
-#    secgroup-add-rule   Add a rule to a security group.
-#    secgroup-delete-group-rule
-#                        Delete a source group rule from a security group.
-#    secgroup-delete-rule
-#                        Delete a rule from a security group.
-#    secgroup-list-rules
-#                        List rules for a security group.
 #    show                Show details about the given server.
 #    suspend             Suspend a server.
 #    unpause             Unpause a server.
@@ -98,8 +89,6 @@ function teardown() {
 #    zone-delete         Delete a zone.
 #    zone-info           Get this zones name and capabilities.
 #    zone-list           List the children of a zone.
-#    help                Display help about this program or one of its
-#                        subcommands.
 
 function 010_nova_image-list() {
   if ! nova image-list|egrep $DEFAULT_IMAGE_NAME; then
@@ -133,7 +122,12 @@ function 021_nova_secgroup-add-rule() {
   # usage: nova secgroup-add-rule <secgroup> <ip_proto> <from_port> <to_port> <cidr>
   nova secgroup-add-rule $SECGROUP icmp -1 -1 0.0.0.0/0
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep icmp; do sleep 1; done"; then
-    echo "Security group rule not added"
+    echo "PING: Security group rule not added"
+    return 1
+  fi 
+  nova secgroup-add-rule $SECGROUP tcp 22 22 0.0.0.0/0
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
+    echo "SSH: Security group rule not added"
     return 1
   fi 
 }
@@ -141,8 +135,8 @@ function 021_nova_secgroup-add-rule() {
 function 022_nova-secgroup-add-group-rule() {
   # usage: nova secgroup-add-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
   #                                      [--to_port <to_port>] <secgroup> <source_group>
-  nova secgroup-add-group-rule --ip_proto tcp --from_port 22 --to_port 22 $SECGROUP $SOURCE_SECGROUP
-  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
+  nova secgroup-add-group-rule --ip_proto tcp --from_port 80 --to_port 80 $SECGROUP $SOURCE_SECGROUP
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep $SOURCE_SECGROUP; do sleep 1; done"; then
     echo "Security group rule not added"
     return 1
   fi
@@ -151,8 +145,8 @@ function 022_nova-secgroup-add-group-rule() {
 function 997_nova_secgroup-delete-group-rule() {
   # usage: nova secgroup-delete-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
   #                                     [--to_port <to_port>] <secgroup> <source_group>
-  nova secgroup-delete-group-rule --ip_proto tcp --from_port 22 --to_port 22 $SECGROUP $SOURCE_SECGROUP
-  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
+  nova secgroup-delete-group-rule --ip_proto tcp --from_port 80 --to_port 80 $SECGROUP $SOURCE_SECGROUP
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep $SOURCE_SECGROUP; do sleep 1; done"; then
     echo "Security group rule not added"
     return 1
   fi
@@ -160,9 +154,14 @@ function 997_nova_secgroup-delete-group-rule() {
 
 function 998_nova_secgroup-delete-rule() {
   # usage: nova secgroup-delete-rule <secgroup> <ip_proto> <from_port> <to_port> <cidr>
+  nova secgroup-delete-rule $SECGROUP tcp 22 22 0.0.0.0/0
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
+    echo "SSH: Security group rule not deleted"
+    return 1
+  fi 
   nova secgroup-delete-rule $SECGROUP icmp -1 -1 0.0.0.0/0
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep icmp; do sleep 1; done"; then
-    echo "Security group rule not deleted"
+    echo "PING: Security group rule not deleted"
     return 1
   fi 
 }
