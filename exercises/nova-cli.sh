@@ -17,7 +17,7 @@ function setup() {
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
 
     # Boot this image, use first AMi image if unset
-    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-server}
+    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:ubuntu-11.04-server}
 
     # Find the instance type ID
     INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
