@@ -15,7 +15,7 @@ function setup() {
 
     # Instance type to create
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
-    
+
     # Boot this image, use first AMi image if unset
     DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-server}
 
@@ -153,12 +153,12 @@ function 021_nova_secgroup-add-rule() {
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep icmp; do sleep 1; done"; then
     echo "PING: Security group rule not added"
     return 1
-  fi 
+  fi
   nova secgroup-add-rule $SECGROUP tcp 22 22 0.0.0.0/0
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
     echo "SSH: Security group rule not added"
     return 1
-  fi 
+  fi
 }
 
 function 022_nova_secgroup-add-group-rule() {
@@ -187,7 +187,7 @@ function 030_nova_keypair-add() {
 }
 
 function 040_nova-boot() {
-  # usage: nova boot [--flavor <flavor>] [--image <image>] [--meta <key=value>] [--file <dst-path=src-path>] 
+  # usage: nova boot [--flavor <flavor>] [--image <image>] [--meta <key=value>] [--file <dst-path=src-path>]
   #                  [--key_path [<key_path>]] [--key_name <key_name>] [--user_data <user-data>]
   #                  [--availability_zone <availability-zone>] [--security_groups <security_groups>]
   #                  <name>
@@ -200,13 +200,13 @@ function 040_nova-boot() {
 }
 
 function 041_nova-boot_verify_ssh_key() {
-  INSTANCE_IP=$(nova list | grep ${DEFAULT_INSTANCE_NAME}  | cut -d" " -f8 | sed -e 's/public=//g' | sed -e 's/;//g')
-  if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
-    echo "port 22 never became available"
-    return 1
-  fi
+    INSTANCE_IP=$(nova show ${DEFAULT_INSTANCE_NAME} | grep "public network" | sed -r -e 's/ +/ /g' | cut -d' ' -f5)
+    if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+	echo "port 22 never became available"
+	return 1
+    fi
 
-  timeout $ACTIVE_TIMEOUT ssh ${INSTANCE_IP} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+    timeout $ACTIVE_TIMEOUT ssh ${INSTANCE_IP} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
 }
 
 ##### SPIN UP TESTS ####
@@ -283,12 +283,12 @@ function 998_nova_secgroup-delete-rule() {
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
     echo "SSH: Security group rule not deleted"
     return 1
-  fi 
+  fi
   nova secgroup-delete-rule $SECGROUP icmp -1 -1 0.0.0.0/0
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep icmp; do sleep 1; done"; then
     echo "PING: Security group rule not deleted"
     return 1
-  fi 
+  fi
 }
 
 function 999_nova_secgroup-delete() {
