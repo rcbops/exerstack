@@ -77,21 +77,21 @@ function setup() {
 
 function 010_nova_image-list() {
   if ! nova image-list|egrep $DEFAULT_IMAGE_NAME; then
-    echo "Unable to find DEFAULT_IMAGE_NAME"
+    echo "Unable to find ${DEFAULT_IMAGE_NAME}"
     return 1
   fi
 }
 
 function 011_nova_image-show() {
   if ! nova image-show $DEFAULT_IMAGE_NAME|egrep status|grep ACTIVE; then
-    echo "DEFAULT_IMAGE_NAME is not listed as ACTIVE"
+    echo "${DEFAULT_IMAGE_NAME} is not listed as ACTIVE"
     return 1
   fi
 }
 
 function 012_nova_flavor-list() {
   if ! nova flavor-list|egrep $DEFAULT_INSTANCE_TYPE; then
-    echo "Unable to find DEFAULT_INSTANCE_TYPE"
+    echo "Unable to find ${DEFAULT_INSTANCE_TYPE}"
     return 1
   fi
 }
@@ -100,7 +100,7 @@ function 020_shared_key-nova_keypair-add() {
   # usage: nova keypair-add [--pub_key <pub_key>] <name>
   nova keypair-add --pub_key $SHARED_PUB_KEY $SHARED_KEY_NAME
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
-    echo "Keypair $SHARED_PRIV_KEY not imported"
+    echo "Keypair ${SHARED_PRIV_KEY} not imported"
     return 1
   fi
 }
@@ -118,7 +118,7 @@ function 022_shared_key-nova-keypair-delete() {
   # usage: nova keypair-delete <name>
   nova keypair-delete $SHARED_KEY_NAME
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova keypair-list | grep $SHARED_KEY_NAME; do sleep 1; done"; then
-    echo "Keypair $SHARED_KEY_NAME not deleted"
+    echo "Keypair ${SHARED_KEY_NAME} not deleted"
     return 1
   fi
 }
@@ -132,7 +132,7 @@ function 030_nova_secgroup-create() {
       return 1
     fi
   else
-    echo "SECURITY GROUP: $SECGROUP already exists"
+    echo "SECURITY GROUP: ${SECGROUP} already exists"
     return 1
   fi
 }
@@ -167,11 +167,11 @@ function 040_nova_keypair-add() {
   if [ -e $TMPDIR/$TEST_PRIV_KEY ]; then
     chmod 600 $TMPDIR/$TEST_PRIV_KEY
   else
-    echo "Private key $TEST_PRIV_KEY not redirected to file"
+    echo "Private key ${TEST_PRIV_KEY} not redirected to file"
     return 1
   fi
   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova keypair-list | grep $TEST_KEY_NAME; do sleep 1; done"; then
-    echo "Keypair $TEST_KEY_NAME not created"
+    echo "Keypair ${TEST_KEY_NAME} not created"
     return 1
   fi
 }
