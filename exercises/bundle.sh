@@ -7,8 +7,8 @@ function setup() {
 
 function 001_get_certificates() {
     # Get Certificates
-    nova x509-get-root-cert
-    nova x509-create-cert
+    timeout 10 nova x509-get-root-cert
+    timeout 10 nova x509-create-cert
 }
 
 function 002_register_bundle() {
