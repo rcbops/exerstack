@@ -338,7 +338,7 @@ function 059_nova-reboot() {
 function 060_nova-rename() {
   local image_id=${DEFAULT_INSTANCE_NAME}
   nova rename ${image_id} ${DEFAULT_INSTANCE_NAME}-rename
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}|grep name| grep $DEFAULT_INSTANCE_NAME-rename; do sleep 1; done"; then
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}-rename|grep name| grep $DEFAULT_INSTANCE_NAME-rename; do sleep 1; done"; then
     echo "Unable to rename instance"
     return 1
   fi
@@ -360,7 +360,7 @@ function 064_nova_image-delete() {
 
 function 099_nova-delete() {
   # usage: nova delete <server>
-  local image_id=${DEFAULT_INSTANCE_NAME}
+  local image_id=${DEFAULT_INSTANCE_NAME}-rename
   nova delete ${image_id}
   if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${image_id}; do sleep 1; done"; then
     echo "Unable to delete instance: ${DEFAULT_INSTANCE_NAME}"
