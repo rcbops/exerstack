@@ -31,6 +31,9 @@ function setup() {
     # Define a source_secgroup
     SOURCE_SECGROUP=${SOURCE_SECGROUP:-default}
 
+    # Define the network name to use for ping/ssh tests
+    DEFAULT_NETWORK_NAME=${DEFAULT_NETWORK_NAME:-public}
+
     # Default floating IP pool name
     DEFAULT_FLOATING_POOL=${DEFAULT_FLOATING_POOL:-nova}
 
@@ -45,7 +48,6 @@ function setup() {
 
 #    actions             Retrieve server actions.
 #    add-fixed-ip        Add new IP address to network.
-#    add-floating-ip     Add a floating IP address to a server.
 #    diagnostics         Retrieve server diagnostics.
 #                        servers).
 #    image-create        Create a new image by taking a snapshot of a running
@@ -190,142 +192,177 @@ function 050_nova-boot() {
 }
 
 function 051_nova-show() {
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  if ! nova show ${INSTANCE_ID} |grep user_id|grep $NOVA_USERNAME; then
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  if ! nova show ${image_id} |grep user_id|grep $NOVA_USERNAME; then
     echo "nova show: user_id is not correct"
     return 1
   fi
-  if ! nova show ${INSTANCE_ID} |grep flavor|grep $DEFAULT_INSTANCE_TYPE; then
+  if ! nova show ${image_id} |grep flavor|grep $DEFAULT_INSTANCE_TYPE; then
     echo "nova show: flavor is not correct"
     return 1
   fi
-  if ! nova show ${INSTANCE_ID} |grep image|grep $DEFAULT_IMAGE_NAME; then
+  if ! nova show ${image_id} |grep image|grep $DEFAULT_IMAGE_NAME; then
     echo "nova show: user_id is not correct"
     return 1
   fi
 }
 
-function 052_nova-boot_verify_ssh_key() {
-  INSTANCE_IP=$(nova list | grep ${DEFAULT_INSTANCE_NAME}  | cut -d" " -f8 | sed -e 's/public=//g' | sed -e 's/;//g')
-  if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+function 052_associate_floating_ip() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+
+  NOVA_HAS_FLOATING=1
+  # Allocate floating address'
+  if ! IP=$(nova floating-ip-create); then
+    NOVA_HAS_FLOATING=0
+    SKIP_MSG="No floating ip"
+    SKIP_TEST=1
+    return 1
+  fi
+
+  FLOATING_IP=$(echo ${IP} | cut -d' ' -f13)
+
+  # Associate floating address
+  # usage: nova add-floating-ip <server> <address>
+  nova add-floating-ip ${image_id} ${FLOATING_IP}
+  
+  if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while nova show ${DEFAULT_INSTANCE_NAME} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
+    echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
+    return 1
+  fi
+
+  # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
+  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done"; then
+    echo "Couldn't ping server with floating ip"
+    return 1
+  fi
+}
+
+function 053_nova-boot_verify_ssh_key() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  local ip=${FLOATING_IP}
+
+  [ $NOVA_HAS_FLOATING -eq 1 ] || ip=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME}  | cut -f4)
+  
+  if ! timeout ${BOOT_TIMEOUT} sh -c "while ! ping -c1 -w1 ${ip}; do sleep 1; done"; then
+    echo "Could not ping server with floating/local ip"
+    return 1
+  fi
+
+  if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
     echo "port 22 never became available"
     return 1
   fi
-  timeout $ACTIVE_TIMEOUT ssh ${INSTANCE_IP} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+
+  timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
 }
 
-function 053_nova-pause() {
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  if ! nova pause ${INSTANCE_ID}; then
+function 054_nova_remove-floating-ip() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  local ip=${FLOATING_IP}
+
+  [ $NOVA_HAS_FLOATING -eq 1 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return 1
+
+  # usage: nova remove-floating-ip <server> <address>
+  nova remove-floating-ip ${image_id} ${ip}
+
+  if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while nova show ${DEFAULT_INSTANCE_NAME} | grep ${DEFAULT_NETWORK_NAME} | grep ${ip}; do sleep 1; done"; then
+    echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
+    return 1
+  fi
+}
+
+function 055_nova-pause() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  if ! nova pause ${image_id}; then
     echo "Unable to pause instance"
     return 1
   fi
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep PAUSED; do sleep 1; done"; then
+  if ! timeout ${ACTIVE_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep PAUSED; do sleep 1; done"; then
     echo "Instance was not paused successfully"
     return 1
   fi
 }
 
-function 054_nova-unpause() {
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  if ! nova unpause ${INSTANCE_ID}; then
+function 056_nova-unpause() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  if ! nova unpause ${image_id}; then
     echo "Unable to unpause instance"
     return 1
   fi
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep ACTIVE; do sleep 1; done";  then
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1; done";  then
     echo "Instance was not unpaused successfully"
     return 1
   fi
 }
 
-function 055_nova-suspend() {
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  if ! nova suspend ${INSTANCE_ID}; then
+function 057_nova-suspend() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  if ! nova suspend ${image_id}; then
     echo "Unable to suspend instance"
     return 1
   fi
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep SUSPENDED; do sleep 1; done"; then
+  if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep SUSPENDED; do sleep 1; done"; then
     echo "Instance was not suspended successfully"
     return 1
   fi
 }
 
-function 056_nova-resume() {
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  if ! nova resume ${INSTANCE_ID}; then
+function 058_nova-resume() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  if ! nova resume ${image_id}; then
     echo "Unable to resume instance"
     return 1
   fi
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep ACTIVE; do sleep 1; done";  then
+  if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1; done";  then
     echo "Instance was not resumed successfully"
     return 1
   fi
 }
 
-function 057_nova-reboot() {
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  if ! nova reboot ${INSTANCE_ID}; then
+function 059_nova-reboot() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  if ! nova reboot ${image_id}; then
     echo "Unable to reboot instance"
     return 1
   fi
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep REBOOT; do sleep 1;done"; then
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}|grep status|grep REBOOT; do sleep 1;done"; then
     echo "Instance never entered REBOOT status"
     return 1
   fi
-  if ! timeout $BOOT_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep ACTIVE; do sleep 1;done"; then
+  if ! timeout $BOOT_TIMEOUT sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1;done"; then
     echo "Instance never returned to ACTIVE status"
     return 1
   fi
 }
 
-function 058_nova-rebuild() {
-  SKIP_MSG="Not working"
-  SKIP_TEST=1
-#   INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-#   if ! nova rebuild ${INSTANCE_ID} $DEFAULT_INSTANCE_TYPE; then
-#     echo "Unable to rebuild instance"
-#     return 1
-#   fi
-#   if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep REBUILD; do sleep 1;done"; then
-#     echo "Instance never entered REBUILD status"
-#     return 1
-#   fi
-#   if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep status|grep ACTIVE; do sleep 1;done"; then
-#     echo "Instance never returned to ACTIVE status"
-#     return 1
-#   fi
-}
-
-function 059_nova-rename() {
-  x=1
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  nova rename ${INSTANCE_ID} ${DEFAULT_INSTANCE_NAME}-rename
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${INSTANCE_ID}|grep name| grep $DEFAULT_INSTANCE_NAME-rename; do sleep 1; done"; then
+function 060_nova-rename() {
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  nova rename ${image_id} ${DEFAULT_INSTANCE_NAME}-rename
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}|grep name| grep $DEFAULT_INSTANCE_NAME-rename; do sleep 1; done"; then
     echo "Unable to rename instance"
     return 1
   fi
 }
 
-function 060_nova_image-create() {
+function 061_nova_image-create() {
   # usage: nova image-create <server> <name>
   SKIP_MSG="Not Implemented Yet"
   SKIP_TEST=1
   return 1
 }
 
-function 062_nova_image-delete() {
+function 064_nova_image-delete() {
   # usage: nova image-delete <image>
   SKIP_MSG="Not Implemented Yet"
   SKIP_TEST=1
   return 1
 }
 
-
 function 099_nova-delete() {
   # usage: nova delete <server>
-  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-  nova delete ${INSTANCE_ID}
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${INSTANCE_ID}; do sleep 1; done"; then
+  local image_id=${DEFAULT_INSTANCE_NAME}
+  nova delete ${image_id}
+  if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${image_id}; do sleep 1; done"; then
     echo "Unable to delete instance: ${DEFAULT_INSTANCE_NAME}"
     return 1
   fi
@@ -357,9 +394,9 @@ function 101_custom_key-verify_ssh_key() {
 function 102_custom_key-nova-delete() {
   SKIP_MSG="Breaks metadata requests"
   SKIP_TEST=1
-#  INSTANCE_ID=$(nova list | grep $DEFAULT_INSTANCE_NAME | cut -d" " -f2)
-#  nova delete ${INSTANCE_ID}
-#  if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${INSTANCE_ID}; do sleep 1; done"; then
+#  local image_id=${DEFAULT_INSTANCE_NAME}
+#  nova delete ${image_id}
+#  if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${image_id}; do sleep 1; done"; then
 #    echo "Unable to delete instance: ${DEFAULT_INSTANCE_NAME}"
 #    return 1
 #  fi
