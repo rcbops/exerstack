@@ -247,7 +247,7 @@ function 053_nova-boot_verify_ssh_key() {
     return 1
   fi
 
-  # timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+  timeout ${ACTIVE_TIMEOUT} sh -c "ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id";
 }
 
 function 054_nova_remove-floating-ip() {
