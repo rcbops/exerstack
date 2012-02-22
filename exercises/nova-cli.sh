@@ -225,14 +225,8 @@ function 052_associate_floating_ip() {
   # usage: nova add-floating-ip <server> <address>
   nova add-floating-ip ${image_id} ${FLOATING_IP}
   
-  if timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
+  if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
     echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
-    return 1
-  fi
-
-  # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
-  if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done"; then
-    echo "Couldn't ping server with floating ip"
     return 1
   fi
 }
@@ -260,7 +254,7 @@ function 054_nova_remove-floating-ip() {
   local image_id=${DEFAULT_INSTANCE_NAME}
   local ip=${FLOATING_IP}
 
-  [ $NOVA_HAS_FLOATING -eq 1 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return 1
+  [ $NOVA_HAS_FLOATING -eq 0 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return 1
 
   # usage: nova remove-floating-ip <server> <address>
   nova remove-floating-ip ${image_id} ${ip}
