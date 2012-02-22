@@ -254,7 +254,11 @@ function 054_nova_remove-floating-ip() {
   local image_id=${DEFAULT_INSTANCE_NAME}
   local ip=${FLOATING_IP}
 
-  [ $NOVA_HAS_FLOATING -eq 1 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return 1
+  if [ $NOVA_HAS_FLOATING -eq 0 ]; then
+    SKIP_TEST=1
+    SKIP_MSG="No floating ips"
+    return 1
+  fi
 
   # usage: nova remove-floating-ip <server> <address>
   nova remove-floating-ip ${image_id} ${ip}
