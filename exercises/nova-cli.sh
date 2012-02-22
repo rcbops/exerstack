@@ -225,7 +225,7 @@ function 052_associate_floating_ip() {
   # usage: nova add-floating-ip <server> <address>
   nova add-floating-ip ${image_id} ${FLOATING_IP}
   
-  if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while nova show ${DEFAULT_INSTANCE_NAME} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
+  if timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
     echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
     return 1
   fi
