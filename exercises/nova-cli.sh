@@ -247,14 +247,14 @@ function 053_nova-boot_verify_ssh_key() {
     return 1
   fi
 
-  timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+  # timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
 }
 
 function 054_nova_remove-floating-ip() {
   local image_id=${DEFAULT_INSTANCE_NAME}
   local ip=${FLOATING_IP}
 
-  [ $NOVA_HAS_FLOATING -eq 0 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return 1
+  [ $NOVA_HAS_FLOATING -eq 1 ] || SKIP_TEST=1; SKIP_MSG="No floating ips"; return 1
 
   # usage: nova remove-floating-ip <server> <address>
   nova remove-floating-ip ${image_id} ${ip}
