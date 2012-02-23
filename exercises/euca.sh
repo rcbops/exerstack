@@ -85,10 +85,12 @@ function 055_verify_ssh_key() {
     # wait for 22 to become available
     local ip=${FLOATING_IP}
 
-    [ $EUCA_HAS_FLOATING -eq 1 ] || ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+    if [ ${EUCA_HAS_FLOATING} -eq 0 ]; then
+        ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+    fi
 
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
-    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! ping -c1 -w1 $ip; do sleep 1; done"; then
+    if ! timeout $(( BOOT_TIMEOUT + ASSOCIATE_TIMEOUT )) sh -c "while ! ping -c1 -w1 $ip; do sleep 1; done"; then
         echo "Couldn't ping server with floating/local ip"
 	return 1
     fi

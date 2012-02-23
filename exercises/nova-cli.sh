@@ -17,7 +17,7 @@ function setup() {
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
 
     # Boot this image, use first AMi image if unset
-    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-ubuntu-11.04-server}
+    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-$(nova image-list | awk '{ print $4 }' | grep "\-image" | head -n1)}
 
     # Find the instance type ID
     INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
@@ -179,7 +179,7 @@ function 040_nova_keypair-add() {
 }
 
 function 050_nova-boot() {
-  # usage: nova boot [--flavor <flavor>] [--image <image>] [--meta <key=value>] [--file <dst-path=src-path>] 
+  # usage: nova boot [--flavor <flavor>] [--image <image>] [--meta <key=value>] [--file <dst-path=src-path>]
   #                  [--key_path [<key_path>]] [--key_name <key_name>] [--user_data <user-data>]
   #                  [--availability_zone <availability-zone>] [--security_groups <security_groups>]
   #                  <name>
@@ -224,7 +224,7 @@ function 052_associate_floating_ip() {
   # Associate floating address
   # usage: nova add-floating-ip <server> <address>
   nova add-floating-ip ${image_id} ${FLOATING_IP}
-  
+
   if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
     echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
     return 1
@@ -235,8 +235,10 @@ function 053_nova-boot_verify_ssh_key() {
   local image_id=${DEFAULT_INSTANCE_NAME}
   local ip=${FLOATING_IP}
 
-  [ $NOVA_HAS_FLOATING -eq 1 ] || ip=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME}  | cut -f4)
-  
+  if [ ${NOVA_HAS_FLOATING} -eq 0 ]; then
+      ip=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
+  fi
+
   if ! timeout ${BOOT_TIMEOUT} sh -c "while ! ping -c1 -w1 ${ip}; do sleep 1; done"; then
     echo "Could not ping server with floating/local ip"
     return 1
