@@ -7,6 +7,9 @@ function setup() {
     # Max time till the vm is bootable
     BOOT_TIMEOUT=${BOOT_TIMEOUT:-30}
 
+    # Max time to wait for suspend/pause/resume
+    SUSPEND_TIMEOUT=$(( BOOT_TIMEOUT + ACTIVE_TIMEOUT ))
+
     # Max time to wait for proper association and dis-association.
     ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-15}
 
@@ -277,7 +280,7 @@ function 055_nova-pause() {
     echo "Unable to pause instance"
     return 1
   fi
-  if ! timeout ${ACTIVE_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep PAUSED; do sleep 1; done"; then
+  if ! timeout ${SUSPEND_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep PAUSED; do sleep 1; done"; then
     echo "Instance was not paused successfully"
     return 1
   fi
@@ -289,7 +292,7 @@ function 056_nova-unpause() {
     echo "Unable to unpause instance"
     return 1
   fi
-  if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1; done";  then
+  if ! timeout $SUSPEND_TIMEOUT sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1; done";  then
     echo "Instance was not unpaused successfully"
     return 1
   fi
@@ -301,7 +304,7 @@ function 057_nova-suspend() {
     echo "Unable to suspend instance"
     return 1
   fi
-  if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep SUSPENDED; do sleep 1; done"; then
+  if ! timeout ${SUSPEND_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep SUSPENDED; do sleep 1; done"; then
     echo "Instance was not suspended successfully"
     return 1
   fi
@@ -313,7 +316,7 @@ function 058_nova-resume() {
     echo "Unable to resume instance"
     return 1
   fi
-  if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1; done";  then
+  if ! timeout ${SUSPEND_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1; done";  then
     echo "Instance was not resumed successfully"
     return 1
   fi
