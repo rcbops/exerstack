@@ -26,9 +26,9 @@ function setup() {
 
 function 010_add_secgroup() {
     # Add a secgroup
-    if ! euca-describe-group | grep -q $EUCA_SECGROUP; then
+    if ! euca-describe-groups | grep -q $EUCA_SECGROUP; then
         euca-add-group -d "$EUCA_SECGROUP description" $EUCA_SECGROUP
-        if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! euca-describe-group | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
+        if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! euca-describe-groups | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
             echo "Security group not created"
 	    return 1
         fi
@@ -129,7 +129,7 @@ function 080_remove_security_group() {
     # Delete group
     euca-delete-group $EUCA_SECGROUP
 
-    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-group | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
+    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-groups | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
         echo "Security group not deleted"
 	return 1
     fi
