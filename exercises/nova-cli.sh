@@ -22,6 +22,9 @@ function setup() {
     # Boot this image, use first AMi image if unset
     DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-$(nova image-list | awk '{ print $4 }' | grep "\-image" | head -n1)}
 
+    # Name for snapshot
+    DEFAULT_SNAP_NAME=${DEFAULT_SNAP_NAME:-${DEFAULT_IMAGE_NAME}-snapshot}
+
     # Find the instance type ID
     INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
 
@@ -211,27 +214,27 @@ function 051_nova-show() {
 }
 
 function 052_associate_floating_ip() {
-    local image_id=${DEFAULT_INSTANCE_NAME}
+  local image_id=${DEFAULT_INSTANCE_NAME}
 
-    NOVA_HAS_FLOATING=1
+  NOVA_HAS_FLOATING=1
   # Allocate floating address'
-    if ! IP=$(nova floating-ip-create); then
-	NOVA_HAS_FLOATING=0
-	SKIP_MSG="No floating ips"
-	SKIP_TEST=1
-	return 1
-    fi
+  if ! IP=$(nova floating-ip-create); then
+	  NOVA_HAS_FLOATING=0
+	  SKIP_MSG="No floating ips"
+	  SKIP_TEST=1
+	  return 1
+  fi
 
-    FLOATING_IP=$(echo ${IP} | cut -d' ' -f13)
+  FLOATING_IP=$(echo ${IP} | cut -d' ' -f13)
 
   # Associate floating address
   # usage: nova add-floating-ip <server> <address>
     nova add-floating-ip ${image_id} ${FLOATING_IP}
 
-    if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
-	echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
-	return 1
-    fi
+  if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
+	  echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
+	  return 1
+  fi
 }
 
 function 053_nova-boot_verify_ssh_key() {
@@ -353,16 +356,32 @@ function 060_nova-rename() {
 
 function 061_nova_image-create() {
   # usage: nova image-create <server> <name>
-    SKIP_MSG="Not Implemented Yet"
-    SKIP_TEST=1
-    return 1
+  #  SKIP_MSG="Not Implemented Yet"
+  #  SKIP_TEST=1
+  #  return 1
+
+    local image_id=${DEFAULT_INSTANCE_NAME}
+    nova image-create ${image_id} ${DEFAULT_SNAP_NAME}
+
+    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nova image-show ${DEFAULT_SNAP_NAME} | grep ACTIVE; do sleep 1; done"; then
+      echo "Snapshot not created within ${BOOT_TIMEOUT} seconds"
+      return 1
+    fi
 }
 
 function 064_nova_image-delete() {
   # usage: nova image-delete <image>
-    SKIP_MSG="Not Implemented Yet"
-    SKIP_TEST=1
-    return 1
+  #  SKIP_MSG="Not Implemented Yet"
+  #  SKIP_TEST=1
+  #  return 1
+
+    local image_id=${DEFAULT_SNAP_NAME}
+    nova image-delete ${image_id}
+
+    if ! timeout ${ACTIVE_TIMEOUT} sh -c "while nova image-list | grep ${DEFAULT_SNAP_NAME}; do sleep 1; done"; then
+      echo "Snapshot not deleted within ${ACTIVE_TIMEOUT} seconds"
+      return 1
+    fi
 }
 
 function 099_nova-delete() {
