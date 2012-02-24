@@ -239,10 +239,12 @@ function 052_associate_floating_ip() {
 
 function 053_nova-boot_verify_ssh_key() {
     local image_id=${DEFAULT_INSTANCE_NAME}
-    local ip=${FLOATING_IP}
+    local ip=""
 
     if [ ${NOVA_HAS_FLOATING} -eq 0 ]; then
 	      ip=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
+    else
+        ip=${FLOATING_IP}
     fi
 
     if ! timeout ${BOOT_TIMEOUT} sh -c "while ! ping -c1 -w1 ${ip}; do sleep 1; done"; then
@@ -260,14 +262,14 @@ function 053_nova-boot_verify_ssh_key() {
 
 function 054_nova_remove-floating-ip() {
     local image_id=${DEFAULT_INSTANCE_NAME}
-    local ip=${FLOATING_IP}
-
+    
     if [ $NOVA_HAS_FLOATING -eq 0 ]; then
 	      SKIP_TEST=1
 	      SKIP_MSG="No floating ips"
 	      return 1
     fi
-
+    
+    local ip=${FLOATING_IP}
     # usage: nova remove-floating-ip <server> <address>
     nova remove-floating-ip ${image_id} ${ip}
 
