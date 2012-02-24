@@ -217,7 +217,7 @@ function 052_associate_floating_ip() {
   # Allocate floating address'
   if ! IP=$(nova floating-ip-create); then
     NOVA_HAS_FLOATING=0
-    SKIP_MSG="No floating ip"
+    SKIP_MSG="No floating ips"
     SKIP_TEST=1
     return 1
   fi
