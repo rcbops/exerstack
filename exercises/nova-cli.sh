@@ -239,12 +239,10 @@ function 052_associate_floating_ip() {
 
 function 053_nova-boot_verify_ssh_key() {
     local image_id=${DEFAULT_INSTANCE_NAME}
-    local ip=""
+    local ip=${FLOATING_IP:-""}
 
     if [ ${NOVA_HAS_FLOATING} -eq 0 ]; then
 	      ip=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
-    else
-        ip=${FLOATING_IP}
     fi
 
     if ! timeout ${BOOT_TIMEOUT} sh -c "while ! ping -c1 -w1 ${ip}; do sleep 1; done"; then
@@ -262,14 +260,14 @@ function 053_nova-boot_verify_ssh_key() {
 
 function 054_nova_remove-floating-ip() {
     local image_id=${DEFAULT_INSTANCE_NAME}
-    
+    local ip=${FLOATING_IP:-""}
+
     if [ $NOVA_HAS_FLOATING -eq 0 ]; then
 	      SKIP_TEST=1
 	      SKIP_MSG="No floating ips"
 	      return 1
     fi
     
-    local ip=${FLOATING_IP}
     # usage: nova remove-floating-ip <server> <address>
     nova remove-floating-ip ${image_id} ${ip}
 
@@ -347,16 +345,7 @@ function 059_nova-reboot() {
     fi
 }
 
-function 060_nova-rename() {
-    local image_id=${DEFAULT_INSTANCE_NAME}
-    nova rename ${image_id} ${DEFAULT_INSTANCE_NAME}-rename
-    if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}-rename|grep name| grep $DEFAULT_INSTANCE_NAME-rename; do sleep 1; done"; then
-	      echo "Unable to rename instance"
-	      return 1
-    fi
-}
-
-function 061_nova_image-create() {
+function 060_nova_image-create() {
   # usage: nova image-create <server> <name>
   #  SKIP_MSG="Not Implemented Yet"
   #  SKIP_TEST=1
@@ -383,6 +372,15 @@ function 064_nova_image-delete() {
     if ! timeout ${ACTIVE_TIMEOUT} sh -c "while nova image-list | grep ${DEFAULT_SNAP_NAME}; do sleep 1; done"; then
       echo "Snapshot not deleted within ${ACTIVE_TIMEOUT} seconds"
       return 1
+    fi
+}
+
+function 065_nova-rename() {
+    local image_id=${DEFAULT_INSTANCE_NAME}
+    nova rename ${image_id} ${DEFAULT_INSTANCE_NAME}-rename
+    if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}-rename|grep name| grep $DEFAULT_INSTANCE_NAME-rename; do sleep 1; done"; then
+        echo "Unable to rename instance"
+        return 1
     fi
 }
 
