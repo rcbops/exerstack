@@ -40,6 +40,42 @@ trap "rm -rf ${TMPDIR}" EXIT
 
 COLSIZE=40
 
+
+function skip_if_distro() {
+    #$* distro names
+    local distro_name
+    local running_release=""
+
+    if ! running_release=$( lsb_release -a ); then
+	# need to figure out what distro we are on
+	distro_name=unknown
+    else
+	running_release=$(echo "${running_release}" | grep -i "Codename" | awk '{ print $2 }')
+    fi
+
+    while [ ${#@} -gt 0 ]; do
+	if [[ ${running_release} == $1 ]]; then
+	    SKIP_MSG="Skipping: unsupported distro"
+	    SKIP_TEST=1
+	    return 0
+	fi
+	shift
+    done
+
+    return 1
+}
+
+function skip_if_not_distro() {
+    if skip_if_distro $*; then
+	SKIP_TEST=0
+	return 1
+    else
+	SKIP_TEST=1
+	SKIP_MSG="Skipping: unsupported distro"
+	return 0
+    fi
+}
+
 function should_run() {
     # $1 - file (nova_api)
     # $2 - test (list)
