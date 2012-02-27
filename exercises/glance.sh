@@ -8,7 +8,7 @@ function setup() {
     dd if=/dev/zero of=${TMP_IMAGE_FILE} bs=1K count=5
 
     # Image name for tmp image
-    TMP_IMAGE_NAME=$(echo $TMP_IMAGE_FILE|cut -d'/' -f3)
+    TMP_IMAGE_NAME=$(echo $TMP_IMAGE_FILE|cut -d'/' -f4)
 }
 
 #    add             Adds a new image to Glance
@@ -36,17 +36,48 @@ function setup() {
 #    member-delete    Revokes a member's access to an image
 #    members-replace  Replaces all membership for an image
 
-function 010_glance_add() {
-   IMAGE_ID=$(glance add name="${TMP_IMAGE_NAME}" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}) 
+#function 010_glance_add-TOKEN() {
+#    echo "${TMP_IMAGE_FILE}"
+#    echo "${TMP_IMAGE_NAME}"
+#    if ! IMAGE_ID=$(glance add name="${TMP_IMAGE_NAME}" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}); then
+#        echo "Failed to upload image via glance add"
+#        return 1
+#    fi  
+#}
+
+#function 020_glance_add-CREDENTIALS() {
+#    echo "${TMP_IMAGE_FILE}"
+#    echo "${TMP_IMAGE_NAME}"
+#    if ! IMAGE_ID=$(glance add name="${TMP_IMAGE_NAME}" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}); then
+#        echo "Failed to upload image via glance add"
+#        return 1
+#    fi  
+#}
+
+function 030_glance_add-ENV_VARS() {
+    echo "${TMP_IMAGE_FILE}"
+    echo "${TMP_IMAGE_NAME}"
+    export OS_AUTH_USER=$NOVA_USERNAME
+    export OS_AUTH_KEY=$NOVA_PASSWORD
+    export OS_AUTH_TENANT=$NOVA_PROJECT_ID
+    export OS_AUTH_URL=$NOVA_URL
+    export OS_AUTH_STRATEGY=keystone
+
+    if ! IMAGE_ID=$(glance add name="${TMP_IMAGE_NAME}" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}); then
+        echo "Failed to upload image via glance add"
+        return 1
+    fi  
 }
 
 function 900_glance_delete() {
-
+    x=1
 }
 
 function teardown() {
     # Remove TMP_IMAGE_FILE
-    rm $TMP_IMAGE_FILE
+    if [ -e ${TMP_IMAGE_FILE} ]; then
+        rm $TMP_IMAGE_FILE
+    fi
 }
 
 #function 030_show_details() {
