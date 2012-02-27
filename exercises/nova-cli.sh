@@ -396,7 +396,7 @@ function 099_nova-delete() {
 
 ### Additional spin up tests ###
 
-function 100_custom_key-nova-boot() {
+function 110_custom_key-nova-boot() {
     SKIP_MSG="Breaks metadata requests"
     SKIP_TEST=1
 #  nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_path $SHARED_PUB_KEY ${DEFAULT_INSTANCE_NAME}
@@ -406,18 +406,19 @@ function 100_custom_key-nova-boot() {
 #  fi
 }
 
-function 101_custom_key-verify_ssh_key() {
+function 111_custom_key-verify_ssh_key() {
     SKIP_MSG="Breaks metadata requests"
     SKIP_TEST=1
-#  INSTANCE_IP=$(nova list | grep ${DEFAULT_INSTANCE_NAME}  | cut -d" " -f8 | sed -e 's/public=//g' | sed -e 's/;//g')
+#  local image_id=${DEFAULT_INSTANCE_NAME}
+#  INSTANCE_IP=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
 #  if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
 #    echo "port 22 never became available"
 #    return 1
 #  fi
-#  timeout $ACTIVE_TIMEOUT ssh ${INSTANCE_IP} -i ${SHARED_PRIV_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+#  timeout $ACTIVE_TIMEOUT sh -c "ssh ${INSTANCE_IP} -i ${SHARED_PRIV_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id"
 }
 
-function 102_custom_key-nova-delete() {
+function 112_custom_key-nova-delete() {
     SKIP_MSG="Breaks metadata requests"
     SKIP_TEST=1
 #  local image_id=${DEFAULT_INSTANCE_NAME}
