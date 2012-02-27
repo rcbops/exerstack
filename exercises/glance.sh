@@ -59,15 +59,6 @@ function 011_glance_delete-TOKEN() {
     fi
 }
 
-#function 020_glance_add-CREDENTIALS() {
-#    echo "${TMP_IMAGE_FILE}"
-#    echo "${TMP_IMAGE_NAME}"
-#    if ! IMAGE_ID=$(glance add name="${TMP_IMAGE_NAME}" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}); then
-#        echo "Failed to upload image via glance add"
-#        return 1
-#    fi  
-#}
-
 function 030_glance_add-ENV_VARS() {
     # Export required ENV vars
     export OS_AUTH_USER=$NOVA_USERNAME
