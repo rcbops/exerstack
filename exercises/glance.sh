@@ -11,15 +11,17 @@ function setup() {
     TMP_IMAGE_NAME=$(echo $TMP_IMAGE_FILE|cut -d'/' -f4)
 
     TOKEN=`curl -s -d  "{\"auth\":{\"passwordCredentials\": {\"username\": \"$NOVA_USERNAME\", \"password\": \"$NOVA_PASSWORD\"}}}" -H "Content-type: application/json" http://$HOST_IP:5000/v2.0/tokens | python -c "import sys; import json; tok = json.loads(sys.stdin.read()); print tok['access']['token']['id'];"`
+
+    # Export required ENV vars
+    export OS_AUTH_USER=$NOVA_USERNAME
+    export OS_AUTH_KEY=$NOVA_PASSWORD
+    export OS_AUTH_TENANT=$NOVA_PROJECT_ID
+    export OS_AUTH_URL=$NOVA_URL
+    export OS_AUTH_STRATEGY=keystone
 }
 
-#    add             Adds a new image to Glance
 #    update          Updates an image's metadata in Glance
-#    delete          Deletes an image from Glance
-#    index           Return brief information about images in Glance
 #    details         Return detailed information about images in
-#                    Glance
-#    show            Show detailed information about an image in
 #                    Glance
 #    clear           Removes all images and metadata from Glance
 #    cache-index          List all images currently cached
@@ -60,13 +62,6 @@ function 011_glance_delete-TOKEN() {
 }
 
 function 030_glance_add-ENV_VARS() {
-    # Export required ENV vars
-    export OS_AUTH_USER=$NOVA_USERNAME
-    export OS_AUTH_KEY=$NOVA_PASSWORD
-    export OS_AUTH_TENANT=$NOVA_PROJECT_ID
-    export OS_AUTH_URL=$NOVA_URL
-    export OS_AUTH_STRATEGY=keystone
-
     if ! IMAGE_ID=$(glance add name="${TMP_IMAGE_NAME}-ENV" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}); then
         echo "Failed to upload image using the glance add command"
         return 1
@@ -78,14 +73,73 @@ function 030_glance_add-ENV_VARS() {
     fi
 }
 
-function 900_glance_delete-ENV_VARS() {
-    # Export required ENV vars
-    export OS_AUTH_USER=$NOVA_USERNAME
-    export OS_AUTH_KEY=$NOVA_PASSWORD
-    export OS_AUTH_TENANT=$NOVA_PROJECT_ID
-    export OS_AUTH_URL=$NOVA_URL
-    export OS_AUTH_STRATEGY=keystone
+function 031_glance_update() {
+    local image_id=$(echo $IMAGE_ID| awk -F ": " '{print $2}')
 
+    if ! glance update $image_id arch='x86_64' distro='Ubuntu'; then
+        echo "glance update failed"
+        return 1
+    fi 
+
+    # verify that the expected metadata is there
+    if ! glance show $image_id | grep "Property 'arch': x86_64"; then
+        echo "Property 'arch' not set properly"
+        return 1
+    fi
+    if ! glance show $image_id | grep "Property 'distro': Ubuntu"; then
+        echo "Property 'distro' not set properly"
+        return 1
+    fi
+
+    # Update and replace metadata
+    if ! glance update $image_id arch='x86_64'; then
+        echo "glance update failed"
+        return 1
+    fi 
+
+    # verify that the expected metadata is there
+    if ! glance show $image_id | grep "Property 'arch': x86_64"; then
+        echo "Property 'arch' not set properly"
+        return 1
+    fi
+    if glance show $image_id | grep "Property 'distro': Ubuntu"; then
+        echo "Property 'distro' not deleted properly"
+        return 1
+    fi
+}
+
+function 900_glance_delete-ENV_VARS() {
+    local image_id=$(echo $IMAGE_ID| awk -F ": " '{print $2}')
+
+    if ! glance delete --force $image_id; then
+        echo "Unable to delete image from glance with ID: ${image_id}"
+        return 1
+    fi
+}
+
+function teardown() {
+    # Remove TMP_IMAGE_FILE
+    if [ -e ${TMP_IMAGE_FILE} ]; then
+        rm $TMP_IMAGE_FILE
+    fi
+}
+
+#function 030_show_details() {
+#
+#    # let's get the image numbers we're dealing with here
+#    if [[ -f $IMAGE_DIR/$IMAGES_FILE ]]; then
+#        source $IMAGE_DIR/$IMAGES_FILE
+#    else
+#        echo "there was no $IMAGES_FILE file"
+#        exit 1
+#    fi
+#
+#    for ID in $KERNEL_ID $RAMDISK_ID $MACHINE_ID; do
+#        GLANCE_SHOW=$(glance -A $TOKEN show $ID)
+#        # first check the image is not zero bytes
+}
+
+function 900_glance_delete-ENV_VARS() {
     local image_id=$(echo $IMAGE_ID| awk -F ": " '{print $2}')
 
     if ! glance delete --force $image_id; then
