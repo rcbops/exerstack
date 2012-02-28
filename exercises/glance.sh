@@ -20,7 +20,6 @@ function setup() {
     export OS_AUTH_STRATEGY=keystone
 }
 
-#    update          Updates an image's metadata in Glance
 #    details         Return detailed information about images in
 #                    Glance
 #    clear           Removes all images and metadata from Glance
@@ -106,37 +105,6 @@ function 031_glance_update() {
         echo "Property 'distro' not deleted properly"
         return 1
     fi
-}
-
-function 900_glance_delete-ENV_VARS() {
-    local image_id=$(echo $IMAGE_ID| awk -F ": " '{print $2}')
-
-    if ! glance delete --force $image_id; then
-        echo "Unable to delete image from glance with ID: ${image_id}"
-        return 1
-    fi
-}
-
-function teardown() {
-    # Remove TMP_IMAGE_FILE
-    if [ -e ${TMP_IMAGE_FILE} ]; then
-        rm $TMP_IMAGE_FILE
-    fi
-}
-
-#function 030_show_details() {
-#
-#    # let's get the image numbers we're dealing with here
-#    if [[ -f $IMAGE_DIR/$IMAGES_FILE ]]; then
-#        source $IMAGE_DIR/$IMAGES_FILE
-#    else
-#        echo "there was no $IMAGES_FILE file"
-#        exit 1
-#    fi
-#
-#    for ID in $KERNEL_ID $RAMDISK_ID $MACHINE_ID; do
-#        GLANCE_SHOW=$(glance -A $TOKEN show $ID)
-#        # first check the image is not zero bytes
 }
 
 function 900_glance_delete-ENV_VARS() {
