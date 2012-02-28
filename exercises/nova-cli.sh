@@ -46,6 +46,9 @@ function setup() {
     # Additional floating IP pool and range
     TEST_FLOATING_POOL=${TEST_FLOATING_POOL:-test}
 
+    # Default SSH OPTIONS
+    SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+
     # File name for generated keys
     TEST_KEY_NAME=${TEST_KEY_NAME:-nova_test_key}
     TEST_PRIV_KEY=${TEST_PRIV_KEY:-$TEST_KEY_NAME.pem}
@@ -256,7 +259,7 @@ function 053_nova-boot_verify_ssh_key() {
         return 1
     fi
 
-    timeout ${ACTIVE_TIMEOUT} sh -c "ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id";
+    timeout ${ACTIVE_TIMEOUT} sh -c "ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY ${SSH_OPTS} -l root -- id";
 }
 
 function 054_nova_remove-floating-ip() {
@@ -387,7 +390,7 @@ function 099_nova-delete() {
     fi
 }
 
-function 110_custom_key-nova-boot() {
+function 110_custom_key-nova_boot() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
 
@@ -408,10 +411,10 @@ function 111_custom_key-verify_ssh_key() {
         echo "port 22 never became available"
         return 1
     fi
-    timeout $ACTIVE_TIMEOUT sh -c "ssh ${INSTANCE_IP} -i ${SHARED_PRIV_KEY} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id"
+    timeout $ACTIVE_TIMEOUT sh -c "ssh ${INSTANCE_IP} -i ${SHARED_PRIV_KEY} ${SSH_OPTS} -l root -- id"
 }
 
-function 112_custom_key-nova-delete() {
+function 112_custom_key-nova_delete() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
 
@@ -419,6 +422,49 @@ function 112_custom_key-nova-delete() {
     nova delete ${image_id}
     if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${image_id}; do sleep 1; done"; then
         echo "Unable to delete instance: ${DEFAULT_INSTANCE_NAME}"
+        return 1
+    fi
+}
+
+function 210_file_injection-nova_boot() {
+    SKIP_MSG="Not Implemented in diablo-final"
+    SKIP_TEST=1
+
+    local instance_name=${DEFAULT_INSTANCE_NAME}-injection
+    local FILE_OPTS="--file /tmp/foo.txt=exercises/include/foo.txt"
+    local BOOT_OPTS="--flavor ${INSTANCE_TYPE} --image ${IMAGE}"
+    local KEY_OPTS="--key_name ${TEST_KEY_NAME}"
+    local SEC_OPTS="--security_groups ${SECGROUP}"
+
+    nova boot ${BOOT_OPTS} ${KEY_OPTS} ${FILE_OPTS} ${SEC_OPTS} ${SECGROUP} ${instance_name}
+    if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${instance_name} | grep ACTIVE; do sleep 1; done"; then
+        echo "Instance ${instance_name} failed to boot"
+        return 1
+    fi
+}
+
+function 211_file_injection-verify_file_contents() {
+    SKIP_MSG="Not Implemented in diablo-final"
+    SKIP_TEST=1
+
+    local instance_name=${DEFAULT_INSTANCE_NAME}
+    local KEY_OPTS="-i ${TMPDIR}/${TEST_PRIV_KEY}"
+    INSTANCE_IP=$(nova show ${instance_name} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
+    if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+        echo "port 22 never became available"
+        return 1
+    fi
+    timeout $ACTIVE_TIMEOUT sh -c "ssh ${INSTANCE_IP} ${KEY_OPTS} ${SSH_OPTS} -l root -- cat /tmp/foo.txt"
+}
+
+function 212_file_injection-nova_delete() {
+    SKIP_MSG="Not Implemented in diablo-final"
+    SKIP_TEST=1
+
+    local instance_name=${DEFAULT_INSTANCE_NAME}-injection
+    nova delete ${instance_name}
+    if ! timeout $ACTIVE_TIMEOUT sh -c "while nova list | grep ${instance_name}; do sleep 1; done"; then
+        echo "Unable to delete instance: ${instance_name}"
         return 1
     fi
 }
