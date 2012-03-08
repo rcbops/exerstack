@@ -203,10 +203,6 @@ function 050_nova-boot() {
 
 function 051_nova-show() {
     local image_id=${DEFAULT_INSTANCE_NAME}
-    if ! nova show ${image_id} |grep user_id|grep $NOVA_USERNAME; then
-        echo "nova show: user_id is not correct"
-        return 1
-    fi
     if ! nova show ${image_id} |grep flavor|grep $DEFAULT_INSTANCE_TYPE; then
         echo "nova show: flavor is not correct"
         return 1
