@@ -225,14 +225,19 @@ function 052_associate_floating_ip() {
         return 1
     fi
 
-    FLOATING_IP=$(echo ${IP} | cut -d' ' -f13)
+    if [[ $PACKAGESET < "essex" ]]; then
+        FLOATING_IP=$(echo ${IP} | cut -d' ' -f13)
+    else
+        # Essex added a new column to the output
+        FLOATING_IP=$(echo ${IP} | cut -d' ' -f15)
+    fi
 
     # Associate floating address
     # usage: nova add-floating-ip <server> <address>
     nova add-floating-ip ${image_id} ${FLOATING_IP}
 
     if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | grep ${FLOATING_IP}; do sleep 1; done"; then
-        echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
+        echo "floating ip ${FLOATING_IP} not added within ${ASSOCIATE_TIMEOUT} seconds"
         return 1
     fi
 }
@@ -273,6 +278,11 @@ function 054_nova_remove-floating-ip() {
 
     if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while nova show ${DEFAULT_INSTANCE_NAME} | grep ${DEFAULT_NETWORK_NAME} | grep ${ip}; do sleep 1; done"; then
         echo "floating ip ${ip} not removed within ${ASSOCIATE_TIMEOUT} seconds"
+        return 1
+    fi
+
+    if ! nova floating-ip-delete ${ip}; then
+        echo "Unable to delete floating ip ${ip}"
         return 1
     fi
 }
