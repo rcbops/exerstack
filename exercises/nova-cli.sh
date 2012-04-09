@@ -402,6 +402,7 @@ function 099_nova-delete() {
 function 110_custom_key-nova_boot() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
+    return 1
 
     nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_path $SHARED_PUB_KEY ${DEFAULT_INSTANCE_NAME}
     if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
@@ -413,6 +414,7 @@ function 110_custom_key-nova_boot() {
 function 111_custom_key-verify_ssh_key() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
+    return 1
 
     local image_id=${DEFAULT_INSTANCE_NAME}
     INSTANCE_IP=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
@@ -426,6 +428,7 @@ function 111_custom_key-verify_ssh_key() {
 function 112_custom_key-nova_delete() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
+    return 1
 
     local image_id=${DEFAULT_INSTANCE_NAME}
     nova delete ${image_id}
@@ -435,9 +438,10 @@ function 112_custom_key-nova_delete() {
     fi
 }
 
-function 210_file_injection-nova_boot() {
+function 120_file_injection-nova_boot() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
+    return 1
 
     local instance_name=${DEFAULT_INSTANCE_NAME}-injection
     local FILE_OPTS="--file /tmp/foo.txt=exercises/include/foo.txt"
@@ -452,9 +456,10 @@ function 210_file_injection-nova_boot() {
     fi
 }
 
-function 211_file_injection-verify_file_contents() {
+function 121_file_injection-verify_file_contents() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
+    return 1
 
     local instance_name=${DEFAULT_INSTANCE_NAME}
     local KEY_OPTS="-i ${TMPDIR}/${TEST_PRIV_KEY}"
@@ -466,9 +471,10 @@ function 211_file_injection-verify_file_contents() {
     timeout $ACTIVE_TIMEOUT sh -c "ssh ${INSTANCE_IP} ${KEY_OPTS} ${SSH_OPTS} -l root -- cat /tmp/foo.txt"
 }
 
-function 212_file_injection-nova_delete() {
+function 122_file_injection-nova_delete() {
     SKIP_MSG="Not Implemented in diablo-final"
     SKIP_TEST=1
+    return 1
 
     local instance_name=${DEFAULT_INSTANCE_NAME}-injection
     nova delete ${instance_name}
