@@ -10,6 +10,9 @@ function setup() {
     # Max time to wait for suspend/pause/resume
     SUSPEND_TIMEOUT=$(( BOOT_TIMEOUT + ACTIVE_TIMEOUT ))
 
+    # Max time to wait for a reboot
+    REBOOT_TIMEOUT=$(( ( ACTIVE_TIMEOUT * 2 ) + BOOT_TIMEOUT ))
+
     # Max time to wait for proper association and dis-association.
     ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-15}
 
@@ -349,7 +352,7 @@ function 059_nova-reboot() {
         echo "Instance never entered REBOOT status"
         return 1
     fi
-    if ! timeout $(( ASSOCIATE_TIMEOUT * 2 )) sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1;done"; then
+    if ! timeout ${REBOOT_TIMEOUT} sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1;done"; then
         echo "Instance never returned to ACTIVE status"
         return 1
     fi
