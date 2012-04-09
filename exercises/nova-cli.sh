@@ -349,7 +349,7 @@ function 059_nova-reboot() {
         echo "Instance never entered REBOOT status"
         return 1
     fi
-    if ! timeout $BOOT_TIMEOUT sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1;done"; then
+    if ! timeout $(( ASSOCIATE_TIMEOUT * 2 )) sh -c "while ! nova show ${image_id}|grep status|grep ACTIVE; do sleep 1;done"; then
         echo "Instance never returned to ACTIVE status"
         return 1
     fi
