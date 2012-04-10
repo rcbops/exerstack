@@ -2,10 +2,10 @@
 
 function setup() {
     # Max time to wait while vm goes from build to active state
-    ACTIVE_TIMEOUT=${ACTIVE_TIMEOUT:-30}
+    ACTIVE_TIMEOUT=${ACTIVE_TIMEOUT:-60}
 
     # Max time till the vm is bootable
-    BOOT_TIMEOUT=${BOOT_TIMEOUT:-30}
+    BOOT_TIMEOUT=${BOOT_TIMEOUT:-60}
 
     # Max time to wait for suspend/pause/resume
     SUSPEND_TIMEOUT=$(( BOOT_TIMEOUT + ACTIVE_TIMEOUT ))
@@ -254,12 +254,12 @@ function 053_nova-boot_verify_ssh_key() {
     fi
 
     if ! timeout ${BOOT_TIMEOUT} sh -c "while ! ping -c1 -w1 ${ip}; do sleep 1; done"; then
-        echo "Could not ping server with floating/local ip"
+        echo "Could not ping server with floating/local ip after ${BOOT_TIMEOUT} seconds"
         return 1
     fi
 
     if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
-        echo "port 22 never became available"
+        echo "port 22 never became available after ${BOOT_TIMEOUT} seconds"
         return 1
     fi
 
@@ -344,8 +344,8 @@ function 058_nova-resume() {
 
 function 059_nova-reboot() {
     local image_id=${DEFAULT_INSTANCE_NAME}
-    if ! nova reboot ${image_id}; then
-        echo "Unable to reboot instance"
+    if ! nova reboot --hard ${image_id}; then
+        echo "Unable to reboot instance (hard)"
         return 1
     fi
     if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova show ${image_id}|grep status|grep REBOOT; do sleep 1;done"; then
