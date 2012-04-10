@@ -258,7 +258,7 @@ function 053_nova-boot_verify_ssh_key() {
         return 1
     fi
 
-    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1  < /dev/null; do sleep 1; done"; then
         echo "port 22 never became available after ${BOOT_TIMEOUT} seconds"
         return 1
     fi
@@ -418,7 +418,7 @@ function 111_custom_key-verify_ssh_key() {
 
     local image_id=${DEFAULT_INSTANCE_NAME}
     INSTANCE_IP=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
-    if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+    if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1  < /dev/null; do sleep 1; done"; then
         echo "port 22 never became available"
         return 1
     fi
@@ -464,7 +464,7 @@ function 121_file_injection-verify_file_contents() {
     local instance_name=${DEFAULT_INSTANCE_NAME}
     local KEY_OPTS="-i ${TMPDIR}/${TEST_PRIV_KEY}"
     INSTANCE_IP=$(nova show ${instance_name} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
-    if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+    if ! timeout $BOOT_TIMEOUT sh -c "while ! nc ${INSTANCE_IP} 22 -w 1  < /dev/null; do sleep 1; done"; then
         echo "port 22 never became available"
         return 1
     fi
