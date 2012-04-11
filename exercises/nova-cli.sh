@@ -199,7 +199,7 @@ function 050_nova-boot() {
     echo ${IMAGE}
     nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_name ${TEST_KEY_NAME} --security_groups ${SECGROUP} ${DEFAULT_INSTANCE_NAME}
     if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
-        echo "Instance ${DEFAULT_INSTANCE_NAME} failed to boot after ${ACTIVE_TIMEOUT} seconds"
+        echo "Instance ${DEFAULT_INSTANCE_NAME} failed to go active after ${ACTIVE_TIMEOUT} seconds"
         return 1
     fi
 }
