@@ -15,8 +15,13 @@ function setup() {
     export TEST_USER="exerUser"
     export TEST_ROLE="exerRole"
     export TEST_SERVICE="exerService"
+    export TEST_SERVICE_TYPE="exerType"
     export TEST_USER_PASS="exerPass"
     export TEST_ENDPOINT=""
+    export TEST_INT_URL="http://int.example.com:9999"
+    export TEST_PUB_URL="http://ext.example.com:9999"
+    export TEST_ADM_URL="http://adm.example.com:9999"
+    
 }
 
 #    catalog             List service catalog, possibly filtered by service.
@@ -94,11 +99,12 @@ function 030_tenant_details() {
         return 1
     fi
 }
+
 function 035_tenant_disable() {
     # bug 976947
     # disable tenant (currently command succeeds but the disable actually fails as of keystone folsom-1) 
-    keystone tenant-update --enabled false $KEYSTONE_TENANT_ID
-    if keystone tenant-get $TEST_TENANT_ID| grep -i enabled |grep -i true ; then
+    keystone tenant-update --enabled false $TEST_TENANT_ID
+    if  keystone tenant-get $TEST_TENANT_ID| grep -i enabled | grep -i true ; then
         echo "tenant disable command succeeded but tenant was not disabled"
         return 1
     fi
@@ -108,10 +114,21 @@ function 040_tenant_update() {
      # update tenant details
     keystone tenant-update --description "monkeybutler"  $TEST_TENANT_ID
     if ! keystone tenant-get $TEST_TENANT_ID | grep monkeybutler ; then
-        echo "could not update metadata properly"
+        echo "could not update tenant description"
+        return 1
+    fi
+
+    keystone tenant-update --name 'exerTenant2' $TEST_TENANT_ID
+    if ! keystone tenant-get $TEST_TENANT_ID | grep 'exerTenant2' ; then
+        echo "could not update tenant name"
         return 1
     fi
 }
+
+
+
+
+
 
 #### users ####
 function 110_user_create() {
@@ -156,6 +173,20 @@ function 150_user_update() {
     keystone user-update --email 'blah@blah.com' $TEST_USER_ID
     if ! keystone user-get $TEST_USER_ID | grep blah; then
         echo "could not update user details"
+        return 1
+    fi
+
+    keystone user-update --name 'exerUser2' $TEST_USER_ID
+    if ! keystone user-get $TEST_USER_ID | grep exerUser2 ; then
+        echo "could not update user name"
+        return 1
+    fi
+}
+
+function 160_user_disable() {
+    keystone user-update --enabled false $TEST_USER_ID
+    if keystone user-get $TEST_USER_ID | grep -i enabled | grep -i true; then
+        echo "could not disable user"
         return 1
     fi
 }
@@ -203,21 +234,55 @@ function 250_role_user_remove() {
 }
 
 
-#function xxx_manage_ec2_creds() {
-#echo
-#}
-#
-#function xxx_manage_endpoints() {
-#echo
-#}
-#
-#function xxx_manage_roles() {
-#echo
-#}
-#
-#function xxx_manage_services() {
-#echo
-#}
+#### services ####
+
+function 300_service_create() {
+    if ! TEST_SERVICE_ID=$(keystone service-create --name $TEST_SERVICE --type $TEST_SERVICE_TYPE | grep id | awk '{print $4}') ; then
+        echo "could not create service"
+        return 1
+    fi
+}
+
+function 310_service_list() {
+    if ! keystone service-list | grep $TEST_SERVICE_ID ; then
+        echo "could not list services"
+        return 1
+    fi
+}
+
+function 320_service_details() {
+    if ! keystone service-get $TEST_SERVICE_ID ; then
+        echo "could not get service details"
+        return 1
+    fi
+}
+
+
+#### endpoints ####
+
+function 400_endpoint_create() {
+    if ! TEST_ENDPOINT_ID=$(keystone endpoint-create --service_id $TEST_SERVICE_ID --publicurl $TEST_PUB_URL --adminurl $TEST_ADM_URL --internalurl $TEST_INT_URL | egrep ' id ' | awk '{print $4}'); then
+        echo "could not create endpoint"
+        return 1
+    fi
+}
+
+
+function 410_endpoint_list() {
+    if ! keystone endpoint-list | grep $TEST_ENDPOINT_ID ; then
+        echo "could not list endpoints"
+        echo "TEST_ENDPOINT_ID is \'$TEST_ENDPOINT_ID\'"
+        return 1
+    fi
+}
+
+function 420_endpoint_details() {
+# seems to always fail regardless of flags. Will file bug
+    if ! keystone endpoint-get --service $TEST_SERVICE_ID ; then
+        echo "could not get endpoint details"
+        return 1
+    fi
+}
 
 
 
@@ -237,6 +302,7 @@ echo
 
     keystone tenant-delete $TEST_TENANT_ID
     keystone role-delete $TEST_ROLE_ID
+    keystone service-delete $TEST_SERVICE_ID
+    keystone endpoint-delete $TEST_ENDPOINT_ID
     
 }
-
