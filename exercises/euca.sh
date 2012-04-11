@@ -21,6 +21,9 @@ function setup() {
 
     # Define secgroup
     EUCA_SECGROUP=euca_secgroup
+
+    # Determine euca2ools version
+    EUCA_VERSION=$(euca-version  | cut -d" " -f2)
 }
 
 
@@ -86,7 +89,11 @@ function 055_verify_ssh_key() {
     local ip=${FLOATING_IP}
 
     if [ ${EUCA_HAS_FLOATING} -eq 0 ]; then
-        ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+        if [[ ${EUCA_VERSION} < "2.0.0" ]]; then
+            ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+        else
+            ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f17)
+        fi
     fi
 
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
