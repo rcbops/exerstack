@@ -128,13 +128,18 @@ function 065_delete_keypair() {
     euca-delete-keypair ${EUCA_KEYPAIR}
 }
 
-function 070_revoke_secgroup_rule() {
+function 070_terminate_instance() {
+    # Terminate instance
+    euca-terminate-instances $EUCA_INSTANCE
+}
+
+function 080_revoke_secgroup_rule() {
     # Revoke pinging & ssh
     euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 ${EUCA_SECGROUP}
     euca-revoke -P tcp -s 0.0.0.0/0 -p 22-22 ${EUCA_SECGROUP}
 }
 
-function 080_remove_security_group() {
+function 085_remove_security_group() {
     # Delete group
     euca-delete-group $EUCA_SECGROUP
 
@@ -155,9 +160,4 @@ function 090_release_floating() {
         echo "Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds"
 	return 1
     fi
-}
-
-function 100_terminate_instance() {
-    # Terminate instance
-    euca-terminate-instances $EUCA_INSTANCE
 }
