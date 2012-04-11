@@ -61,7 +61,7 @@ function 040_launch_instance() {
 
 function 050_associate_floating_ip() {
     # Allocate floating address
-    FLOATING_IP=`euca-allocate-address | cut -f2`
+    FLOATING_IP=$(euca-allocate-address | cut -d" " -f2)
 
     EUCA_HAS_FLOATING=1
     if [[ ${FLOATING_IP} =~ "Zero" ]]; then
