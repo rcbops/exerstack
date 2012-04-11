@@ -2,7 +2,6 @@
 
 function setup() {
 
-#    TOKEN=`curl -s -d  "{\"auth\":{\"passwordCredentials\": {\"username\": \"$NOVA_USERNAME\", \"password\": \"$NOVA_PASSWORD\"}}}" -H "Content-type: application/json" http://$HOST_IP:5000/v2.0/tokens | python -c "import sys; import json; tok = json.loads(sys.stdin.read()); print tok['access']['token']['id'];"`
 
 
     # Export required ENV vars
@@ -12,7 +11,6 @@ function setup() {
     export OS_AUTH_URL=$NOVA_URL
     export OS_AUTH_STRATEGY=keystone
 
-#    export OS_AUTH_TENANT_ID=`curl -s  -H "X-Auth-Token:999888777666" http://$HOST_IP:35357/v2.0/tenants|python -mjson.tool|grep -B1 $OS_AUTH_TENANT|head -1|cut -d'"' -f4`
     export TEST_TENANT="exerTenant"
     export TEST_USER="exerUser"
     export TEST_ROLE="exerRole"
@@ -96,16 +94,15 @@ function 030_tenant_details() {
         return 1
     fi
 }
+function 035_tenant_disable() {
+    # bug 976947
     # disable tenant (currently command succeeds but the disable actually fails as of keystone folsom-1) 
-#    if keystone tenant-update --enabled false $KEYSTONE_TENANT_ID ; then
-#        if keystone tenant-get $TEST_TENANT_ID| grep -i enabled |grep -i true ; then
-#            echo "tenant disable command succeeded but tenant was not disabled"
-#            return 1
-#        fi
-#    else
-#        echo "tenant disable command failed"
-#        return 1
-#    fi
+    keystone tenant-update --enabled false $KEYSTONE_TENANT_ID
+    if keystone tenant-get $TEST_TENANT_ID| grep -i enabled |grep -i true ; then
+        echo "tenant disable command succeeded but tenant was not disabled"
+        return 1
+    fi
+}
     
 function 040_tenant_update() {
      # update tenant details
@@ -206,19 +203,19 @@ function 250_role_user_remove() {
 }
 
 
-#function 030_manage_ec2_creds() {
+#function xxx_manage_ec2_creds() {
 #echo
 #}
 #
-#function 040_manage_endpoints() {
+#function xxx_manage_endpoints() {
 #echo
 #}
 #
-#function 050_manage_roles() {
+#function xxx_manage_roles() {
 #echo
 #}
 #
-#function 060_manage_services() {
+#function xxx_manage_services() {
 #echo
 #}
 
@@ -231,12 +228,13 @@ function 250_role_user_remove() {
 function teardown() {
 echo
     # Remove our test stuff
-    # workaround for deleting a user
+    # workaround for deleting a user (bug 959294)
     mysql -uroot -pnova  -e 'update keystone.user set extra="{}" where name like "%exer%";'
     # for some reason it doesn't always work first time...
     keystone user-delete $TEST_USER_ID
     keystone user-delete $TEST_USER_ID
     keystone user-delete $TEST_USER_ID
+
     keystone tenant-delete $TEST_TENANT_ID
     keystone role-delete $TEST_ROLE_ID
     
