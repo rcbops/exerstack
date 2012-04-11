@@ -131,6 +131,11 @@ function 065_delete_keypair() {
 function 070_terminate_instance() {
     # Terminate instance
     euca-terminate-instances $EUCA_INSTANCE
+
+    if ! timeout $ACTIVE_TIMEOUT sh -c "while euca-describe-instances | grep $EUCA_INSTANCE; do sleep 1; done"; then
+        echo "Unable to delete instance ${EUCA_INSTANCE}"
+        return
+    fi
 }
 
 function 080_revoke_secgroup_rule() {
