@@ -109,7 +109,7 @@ function 055_verify_ssh_key() {
 	return 1
     fi
 
-    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
+    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 < /dev/null; do sleep 1; done"; then
 	echo "port 22 never became available after ${BOOT_TIMEOUT} seconds"
 	return 1
     fi
