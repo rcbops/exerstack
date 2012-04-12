@@ -105,12 +105,12 @@ function 055_verify_ssh_key() {
 
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
     if ! timeout $(( BOOT_TIMEOUT + ASSOCIATE_TIMEOUT )) sh -c "while ! ping -c1 -w1 $ip; do sleep 1; done"; then
-        echo "Couldn't ping server with floating/local ip"
+        echo "Couldn't ping server with floating/local ip after $(( BOOT_TIMEOUT + ASSOCIATE_TIMEOUT )) seconds"
 	return 1
     fi
 
     if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
-	echo "port 22 never became available"
+	echo "port 22 never became available after ${BOOT_TIMEOUT} seconds"
 	return 1
     fi
 
