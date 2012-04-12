@@ -87,7 +87,7 @@ function 050_associate_floating_ip() {
 function 055_verify_ssh_key() {
     # Fedora is running an old version of euca2ools
     # main-31337 2009-04-04
-    if skip_if_distro "BeefyMiracle"; then return 0; fi
+    # if skip_if_distro "BeefyMiracle"; then return 0; fi
 
     # wait for 22 to become available
     local ip=${FLOATING_IP}
