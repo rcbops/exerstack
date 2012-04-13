@@ -9,7 +9,7 @@ PASSED=0
 SKIP_MSG=""
 
 # FIXME: make command-line option override ENV
-PACKAGESET=${PACKAGESET-"diablo-final"}
+PACKAGESET=${1:-${PACKAGESET:-"diablo-final"}}
 BASEDIR=$(dirname $(readlink -f ${0}))
 
 set -u
