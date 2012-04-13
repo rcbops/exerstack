@@ -21,6 +21,9 @@ function setup() {
 
     # Define secgroup
     EUCA_SECGROUP=euca_secgroup
+
+    # Determine euca2ools version
+    EUCA_VERSION=$(euca-version  | cut -d" " -f2)
 }
 
 
@@ -61,7 +64,7 @@ function 040_launch_instance() {
 
 function 050_associate_floating_ip() {
     # Allocate floating address
-    FLOATING_IP=`euca-allocate-address | cut -f2`
+    FLOATING_IP=$(euca-allocate-address | cut -d" " -f2)
 
     EUCA_HAS_FLOATING=1
     if [[ ${FLOATING_IP} =~ "Zero" ]]; then
@@ -82,21 +85,32 @@ function 050_associate_floating_ip() {
 }
 
 function 055_verify_ssh_key() {
+    # Fedora is running an old version of euca2ools
+    # main-31337 2009-04-04
+    # if skip_if_distro "BeefyMiracle"; then return 0; fi
+
     # wait for 22 to become available
     local ip=${FLOATING_IP}
 
     if [ ${EUCA_HAS_FLOATING} -eq 0 ]; then
-        ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+        if [[ ${EUCA_VERSION} < "2.0.0" ]]; then
+            ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+        elif [[ ${EUCA_VERSION} > "2000" ]]; then
+            # oh fedora
+            ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
+        else
+            ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f17)
+        fi
     fi
 
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
     if ! timeout $(( BOOT_TIMEOUT + ASSOCIATE_TIMEOUT )) sh -c "while ! ping -c1 -w1 $ip; do sleep 1; done"; then
-        echo "Couldn't ping server with floating/local ip"
+        echo "Couldn't ping server with floating/local ip after $(( BOOT_TIMEOUT + ASSOCIATE_TIMEOUT )) seconds"
 	return 1
     fi
 
-    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 -q 0 < /dev/null; do sleep 1; done"; then
-	echo "port 22 never became available"
+    if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 < /dev/null; do sleep 1; done"; then
+	echo "port 22 never became available after ${BOOT_TIMEOUT} seconds"
 	return 1
     fi
 
@@ -121,13 +135,23 @@ function 065_delete_keypair() {
     euca-delete-keypair ${EUCA_KEYPAIR}
 }
 
-function 070_revoke_secgroup_rule() {
+function 070_terminate_instance() {
+    # Terminate instance
+    euca-terminate-instances $EUCA_INSTANCE
+
+    if ! timeout $ACTIVE_TIMEOUT sh -c "while euca-describe-instances | grep $EUCA_INSTANCE; do sleep 1; done"; then
+        echo "Unable to delete instance ${EUCA_INSTANCE}"
+        return
+    fi
+}
+
+function 080_revoke_secgroup_rule() {
     # Revoke pinging & ssh
     euca-revoke -P icmp -s 0.0.0.0/0 -t -1:-1 ${EUCA_SECGROUP}
     euca-revoke -P tcp -s 0.0.0.0/0 -p 22-22 ${EUCA_SECGROUP}
 }
 
-function 080_remove_security_group() {
+function 085_remove_security_group() {
     # Delete group
     euca-delete-group $EUCA_SECGROUP
 
@@ -148,9 +172,4 @@ function 090_release_floating() {
         echo "Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds"
 	return 1
     fi
-}
-
-function 100_terminate_instance() {
-    # Terminate instance
-    euca-terminate-instances $EUCA_INSTANCE
 }
