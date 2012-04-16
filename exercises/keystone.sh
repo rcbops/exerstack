@@ -102,6 +102,7 @@ function 030_tenant_details() {
 
 function 035_tenant_disable() {
     SKIP_TEST=1
+    SKIP_MSG="Skipping pending https://bugs.launchpad.net/keystone/+bug/976947"
     # bug 976947
     # patched in https://review.openstack.org/#/c/6517/
     # disable tenant (currently command succeeds but the disable actually fails as of keystone folsom-1) 
@@ -285,6 +286,7 @@ function 410_endpoint_list() {
 function 420_endpoint_details() {
 # seems to always fail regardless of flags. Will file bug
     SKIP_TEST=1
+    SKIP_MSG="Skipping: Still need to file bug"
     if ! keystone endpoint-get --service $TEST_SERVICE_ID ; then
         echo "could not get endpoint details"
         return 1
@@ -305,6 +307,7 @@ function 500_ec2creds_create() {
 function 510_ec2creds_list() {
     # FIXME(darren)not sure why this fails, but command is working
     SKIP_TEST=1
+    SKIP_MSG="Skipping: This test still needs work"
     if ! keystone ec2-credentials-list | grep "$EC2CREDS_ACCESS_ID" ; then
         echo "could not list ec2creds"
         return 1
