@@ -315,7 +315,7 @@ function 510_ec2creds_list() {
 }
 
 function 520_ec2creds_details() {
-    if ! keystone ec2-credentials-get --access $EC2CREDS_ACCESS_ID ; then
+    if ! keystone ec2-credentials-get --user ${TEST_USER_ID} --access ${EC2CREDS_ACCESS_ID} ; then
         echo "could not get ec2creds details"
         return 1
     fi
