@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 
 function setup() {
-
-
-
-    # Export required ENV vars
-    export OS_USERNAME=$NOVA_USERNAME
-    export OS_PASSWORD=$NOVA_PASSWORD
-    export OS_TENANT_NAME=$NOVA_PROJECT_ID
-    export OS_AUTH_URL=$NOVA_URL
-
+    # Setup variables for testing
     export TEST_TENANT="exerTenant"
     export TEST_USER="exerUser"
     export TEST_ROLE="exerRole"
