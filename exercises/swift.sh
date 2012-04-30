@@ -35,6 +35,7 @@ function setup() {
     fi
 
     dd if=/dev/urandom bs=1024 count=1 | hexdump -C > ${TMPDIR}/small.txt
+    dd if=/dev/urandom bs=1024 count=1 | hexdump -C > ${TMPDIR}/small2.txt
 }
 
 function 010_stat() {
@@ -54,9 +55,9 @@ function 030_upload_file() {
 }
 
 function 040_download_file() {
-    $SWIFT_EXEC download ${SWIFT_TEST_CONTAINER} small.txt -o - > ${TMPDIR}/small2.txt
+    $SWIFT_EXEC download ${SWIFT_TEST_CONTAINER} small.txt -o - > ${TMPDIR}/small3.txt
     local original_md5=$(md5sum ${TMPDIR}/small.txt | awk '{ print $1 }')
-    local new_md5=$(md5sum ${TMPDIR}/small2.txt | awk '{ print $1 }')
+    local new_md5=$(md5sum ${TMPDIR}/small3.txt | awk '{ print $1 }')
 
     if [ "${original_md5}" != "${new_md5}" ]; then
 	echo "MD5 Checksums do not match!"
@@ -64,7 +65,25 @@ function 040_download_file() {
     fi
 }
 
-function 050_delete_container() {
+function 050_update_file() {
+    pushd ${TMPDIR} 2>&1
+    $SWIFT_EXEC upload ${SWIFT_TEST_CONTAINER} small2.txt
+    $SWIFT_EXEC list ${SWIFT_TEST_CONTAINER} | grep small2.txt
+    popd 2>&1
+}
+
+function 060_verify_file() {
+    $SWIFT_EXEC download ${SWIFT_TEST_CONTAINER} small2.txt -o - > ${TMPDIR}/small3.txt
+    local original_md5=$(md5sum ${TMPDIR}/small2.txt | awk '{ print $1 }')
+    local new_md5=$(md5sum ${TMPDIR}/small3.txt | awk '{ print $1 }')
+
+    if [ "${original_md5}" != "${new_md5}" ]; then
+	echo "MD5 Checksums do not match!"
+	return 1
+    fi
+}
+
+function 070_delete_container() {
     $SWIFT_EXEC delete ${SWIFT_TEST_CONTAINER}
     if $SWIFT_EXEC list | grep ${SWIFT_TEST_CONTAINER}; then
 	echo "Container is still there!"
