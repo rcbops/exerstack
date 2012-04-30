@@ -12,12 +12,6 @@ function setup() {
 
     TOKEN=`curl -s -d  "{\"auth\":{\"passwordCredentials\": {\"username\": \"$NOVA_USERNAME\", \"password\": \"$NOVA_PASSWORD\"}}}" -H "Content-type: application/json" http://$HOST_IP:5000/v2.0/tokens | python -c "import sys; import json; tok = json.loads(sys.stdin.read()); print tok['access']['token']['id'];"`
 
-    # Export required ENV vars
-    export OS_AUTH_USER=$NOVA_USERNAME
-    export OS_AUTH_KEY=$NOVA_PASSWORD
-    export OS_AUTH_TENANT=$NOVA_PROJECT_ID
-    export OS_AUTH_URL=$NOVA_URL
-    export OS_AUTH_STRATEGY=keystone
 }
 
 #    details         Return detailed information about images in
