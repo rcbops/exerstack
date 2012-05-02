@@ -10,6 +10,8 @@ SKIP_MSG=""
 
 # FIXME: make command-line option override ENV
 PACKAGESET=${1:-${PACKAGESET:-"diablo-final"}}
+shift
+TESTSCRIPTS=$@
 BASEDIR=$(dirname $(readlink -f ${0}))
 
 set -u
@@ -143,7 +145,20 @@ set | grep ' ()' | cut -d' ' -f1 |sort > ${TMPDIR}/fn_pre.txt
 
 echo "Running test suite for packageset \"${PACKAGESET}\""
 
-for d in ${BASEDIR}/exercises/*.sh; do
+if [ "${TESTSCRIPTS}" == "" ]; then
+    TESTSCRIPTS="*.sh"
+fi
+
+TESTS=""
+pushd ${BASEDIR}/exercises > /dev/null 2>&1
+for d in ${TESTSCRIPTS}; do 
+    for f in $(ls ${d}); do
+	TESTS+="${BASEDIR}/exercises/${f} "
+    done
+done
+popd > /dev/null 2>&1
+
+for d in ${TESTS}; do
     testname=$(basename ${d} .sh)
 
     echo -e "\n=== ${testname} ===\n"
@@ -158,7 +173,14 @@ for d in ${BASEDIR}/exercises/*.sh; do
     source ${d}
     if $(set | grep -q 'setup ()'); then
 	# not in a subshell, so globals can be modified
+	FAIL_REASON="Setup function failed"
 	setup > /dev/null 2>&1
+	if [ $? -ne 0 ]; then
+	    colourise red -n "FAIL: ${FAIL_REASON}"
+	    echo
+	    FAILED=$(( ${FAILED} + 1 ))
+	    continue
+	fi
     fi
 
     # find all the functions defined in the newly sourced file.
@@ -254,9 +276,11 @@ echo
 
 echo
 
-if [ "$FAILED" -ne "0" ] && [ -e ${TMPDIR}/notice.txt ]; then
-    colourise red ERROR TEST OUTPUT
-    cat ${TMPDIR}/notice.txt
+if [ "$FAILED" -ne "0" ]; then
+    if [ -e ${TMPDIR}/notice.txt ]; then
+	colourise red ERROR TEST OUTPUT
+	cat ${TMPDIR}/notice.txt
+    fi
     exit 1
 fi
 
