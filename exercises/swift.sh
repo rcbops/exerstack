@@ -11,7 +11,7 @@ function setup() {
     #
     # we will default to swauth
 
-    SWIFT_AUTH_MODE=${SWIFT_AUTH_MODE:-swauth}
+    SWIFT_AUTH_MODE=${SWIFT_AUTH_MODE:-keystone}
     SWIFT_TEST_CONTAINER=${SWIFT_TEST_CONTAINER:-test_container}
 
     if [ "${SWIFT_AUTH_MODE}" == "swauth" ]; then
