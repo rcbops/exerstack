@@ -151,7 +151,7 @@ fi
 
 TESTS=""
 pushd ${BASEDIR}/exercises > /dev/null 2>&1
-for d in ${TESTSCRIPTS}; do 
+for d in ${TESTSCRIPTS}; do
     for f in $(ls ${d}); do
 	TESTS+="${BASEDIR}/exercises/${f} "
     done
@@ -174,11 +174,20 @@ for d in ${TESTS}; do
     if $(set | grep -q 'setup ()'); then
 	# not in a subshell, so globals can be modified
 	FAIL_REASON="Setup function failed"
-	setup > /dev/null 2>&1
-	if [ $? -ne 0 ]; then
+	echo "======== TEST SETUP FOR ${d} =========" > ${TMPDIR}/test.txt
+
+	set -E
+	trap "status=\$?; trap - ERR; if [ ! -z \${FUNCNAME-} ]; then return \$status; fi" ERR
+	status=0
+	eval "set -x; setup; set +x" >> ${TMPDIR}/test.txt 2>&1
+	trap - ERR
+	set +E
+
+	if [ $status -ne 0 ]; then
 	    colourise red -n "FAIL: ${FAIL_REASON}"
 	    echo
 	    FAILED=$(( ${FAILED} + 1 ))
+	    cat ${TMPDIR}/test.txt >> ${TMPDIR}/notice.txt
 	    continue
 	fi
     fi
