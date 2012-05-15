@@ -34,8 +34,8 @@ function setup() {
 	return 1
     fi
 
-    dd if=/dev/urandom bs=1024 count=1 | hexdump -C > ${TMPDIR}/small.txt
-    dd if=/dev/urandom bs=1024 count=1 | hexdump -C > ${TMPDIR}/small2.txt
+    dd if=/dev/urandom bs=1024 count=1 of=${TMPDIR}/small.txt
+    dd if=/dev/urandom bs=1024 count=1 of=${TMPDIR}/small2.txt
 }
 
 function 010_stat() {
