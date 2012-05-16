@@ -15,23 +15,23 @@ function setup() {
     SWIFT_TEST_CONTAINER=${SWIFT_TEST_CONTAINER:-test_container}
 
     if [ "${SWIFT_AUTH_MODE}" == "swauth" ]; then
-	SWIFT_AUTH_ENDPOINT=${SWIFT_AUTH_ENDPOINT:-http://localhost:8080/auth/v1.0}
-	SWIFT_AUTH_VERSION=""
-	SWIFT_AUTH_USER=${SWIFT_AUTH_USER:-admin:admin}
-	SWIFT_AUTH_PASSWORD=${SWIFT_AUTH_PASSWORD:-secrete}
+        SWIFT_AUTH_ENDPOINT=${SWIFT_AUTH_ENDPOINT:-http://localhost:8080/auth/v1.0}
+        SWIFT_AUTH_VERSION=""
+        SWIFT_AUTH_USER=${SWIFT_AUTH_USER:-admin:admin}
+        SWIFT_AUTH_PASSWORD=${SWIFT_AUTH_PASSWORD:-secrete}
     else
-	SWIFT_AUTH_ENDPOINT=${NOVA_URL}
-	SWIFT_AUTH_VERSION="--auth-version 2"
-	SWIFT_AUTH_USER=${SWIFT_AUTH_USER:-${NOVA_USERNAME}}
-	SWIFT_AUTH_PASSWORD=${SWIFT_AUTH_PASSWORD:-${NOVA_PASSWORD}}
+        SWIFT_AUTH_ENDPOINT=${SWIFT_AUTH_ENDPOINT:-${OS_AUTH_URL}}
+        SWIFT_AUTH_VERSION="--auth-version 2"
+        SWIFT_AUTH_USER=${SWIFT_AUTH_USER:-${NOVA_USERNAME}}
+        SWIFT_AUTH_PASSWORD=${SWIFT_AUTH_PASSWORD:-${NOVA_PASSWORD}}
     fi
 
     SWIFT_EXEC="swift ${SWIFT_AUTH_VERSION} -A ${SWIFT_AUTH_ENDPOINT} -U ${SWIFT_AUTH_USER} -K ${SWIFT_AUTH_PASSWORD}"
 
     local containers=$($SWIFT_EXEC stat | grep "Containers" | awk '{ print $2 }')
     if [ "$containers" != "0" ]; then
-	FAIL_REASON="Account already has data"
-	return 1
+        FAIL_REASON="Account already has data"
+        return 1
     fi
 
     dd if=/dev/urandom bs=1024 count=1 of=${TMPDIR}/small.txt
@@ -60,8 +60,8 @@ function 040_download_file() {
     local new_md5=$(md5sum ${TMPDIR}/small3.txt | awk '{ print $1 }')
 
     if [ "${original_md5}" != "${new_md5}" ]; then
-	echo "MD5 Checksums do not match!"
-	return 1
+        echo "MD5 Checksums do not match!"
+        return 1
     fi
 }
 
@@ -78,16 +78,15 @@ function 060_verify_file() {
     local new_md5=$(md5sum ${TMPDIR}/small3.txt | awk '{ print $1 }')
 
     if [ "${original_md5}" != "${new_md5}" ]; then
-	echo "MD5 Checksums do not match!"
-	return 1
+        echo "MD5 Checksums do not match!"
+        return 1
     fi
 }
 
 function 070_delete_container() {
     $SWIFT_EXEC delete ${SWIFT_TEST_CONTAINER}
     if $SWIFT_EXEC list | grep ${SWIFT_TEST_CONTAINER}; then
-	echo "Container is still there!"
-	return 1
+        echo "Container is still there!"
+        return 1
     fi
 }
-
