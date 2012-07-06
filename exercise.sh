@@ -13,6 +13,7 @@ PACKAGESET=${1:-${PACKAGESET:-"diablo-final"}}
 shift
 TESTSCRIPTS=$@
 BASEDIR=$(dirname $(readlink -f ${0}))
+ONESHOT=${ONESHOT-0}
 
 set -u
 
@@ -238,6 +239,14 @@ for d in ${TESTS}; do
 		echo >> ${TMPDIR}/notice.txt
 
 		FAILED=$(( ${FAILED} + 1 ))
+        if [ $ONESHOT -eq 1 ]; then
+            echo; echo "ONESHOT ACTIVATED!"; echo
+            if [ -e ${TMPDIR}/notice.txt ]; then
+                colourise red ERROR TEST OUTPUT
+                cat ${TMPDIR}/notice.txt
+            fi
+            exit 1
+        fi
 		colourise ${resultcolour} " ${result}"
 	    elif [ $SKIP_TEST -eq 0 ]; then
 		result=$(printf "%0.3fs" "${elapsed}")
