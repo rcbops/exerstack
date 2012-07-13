@@ -56,7 +56,7 @@ function 040_launch_instance() {
     EUCA_INSTANCE=$(euca-run-instances -k ${EUCA_KEYPAIR} -g $EUCA_SECGROUP -t $DEFAULT_INSTANCE_TYPE $EUCA_IMAGE | grep INSTANCE | cut -f2)
 
     # Assure it has booted within a reasonable time
-    if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $EUCA_INSTANCE | grep -q running; do sleep 1; done"; then
+    if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $EUCA_INSTANCE | grep -q running; do if euca-describe-instances $EUCA_INSTANCE | grep -q error; then return 1; fi; sleep 1; done"; then
         echo "server didn't become active within $RUNNING_TIMEOUT seconds"
 	return 1
     fi
