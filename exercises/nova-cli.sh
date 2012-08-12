@@ -442,9 +442,9 @@ function 112_custom_key-nova_delete() {
 }
 
 function 120_file_injection-nova_boot() {
-#    SKIP_MSG="Not Implemented in diablo-final"
-#    SKIP_TEST=1
-#    return 1
+    SKIP_TEST=1
+    SKIP_MSG="Skipping due to https://bugs.launchpad.net/nova/+bug/1024586"
+    return 1
 
     local image_id=${DEFAULT_INSTANCE_NAME}-file
     local FILE_OPTS="--file /tmp/foo.txt=exercises/include/foo.txt"
@@ -460,9 +460,9 @@ function 120_file_injection-nova_boot() {
 }
 
 function 121_file_injection-verify_file_contents() {
-#    SKIP_MSG="Not Implemented in diablo-final"
-#    SKIP_TEST=1
-#    return 1
+    SKIP_TEST=1
+    SKIP_MSG="Skipping due to https://bugs.launchpad.net/nova/+bug/1024586"
+    return 1
 
     local image_id=${DEFAULT_INSTANCE_NAME}-file
     local ip=$(nova show ${image_id} | grep ${DEFAULT_NETWORK_NAME} | cut -d'|' -f3)
@@ -481,9 +481,9 @@ function 121_file_injection-verify_file_contents() {
 }
 
 function 122_file_injection-nova_delete() {
-#    SKIP_MSG="Not Implemented in diablo-final"
-#    SKIP_TEST=1
-#    return 1
+    SKIP_TEST=1
+    SKIP_MSG="Skipping due to https://bugs.launchpad.net/nova/+bug/1024586"
+    return 1
 
     local image_id=${DEFAULT_INSTANCE_NAME}-file
     nova delete ${image_id}
