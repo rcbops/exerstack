@@ -350,8 +350,8 @@ echo
 
     keystone tenant-delete $TEST_TENANT_ID
     keystone role-delete $TEST_ROLE_ID
-    keystone service-delete $TEST_SERVICE_ID
     keystone endpoint-delete $TEST_ENDPOINT_ID
+    keystone service-delete $TEST_SERVICE_ID
     keystone ec2-credentials-delete --access $EC2CREDS_ACCESS_ID
     
 }
