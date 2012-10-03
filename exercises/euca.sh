@@ -56,7 +56,7 @@ function 040_launch_instance() {
     EUCA_INSTANCE=$(euca-run-instances -k ${EUCA_KEYPAIR} -g $EUCA_SECGROUP -t $DEFAULT_INSTANCE_TYPE $EUCA_IMAGE | grep INSTANCE | cut -f2)
 
     # Assure it has booted within a reasonable time
-    if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $EUCA_INSTANCE | grep -q running; do sleep 1; done"; then
+    if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $EUCA_INSTANCE | grep -q running; do if euca-describe-instances $EUCA_INSTANCE | grep -q error; then return 1; fi; sleep 1; done"; then
         echo "server didn't become active within $RUNNING_TIMEOUT seconds"
 	return 1
     fi
@@ -64,10 +64,13 @@ function 040_launch_instance() {
 
 function 050_associate_floating_ip() {
     # Allocate floating address
+    # euca2ools on ubuntu returns Zero for zero floating IP addresses
+    # while the same tool on fedora returns None.  I am sure there are
+    # other variances that we don't about yet.
     FLOATING_IP=$(euca-allocate-address | cut -d" " -f2)
 
     EUCA_HAS_FLOATING=1
-    if [[ ${FLOATING_IP} =~ "Zero" ]]; then
+    if [[ ${FLOATING_IP} =~ "Zero" ||  ${FLOATING_IP} =~ "None" ]]; then
 	EUCA_HAS_FLOATING=0
 	SKIP_MSG="No floating ips"
 	SKIP_TEST=1

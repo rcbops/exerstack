@@ -1,15 +1,7 @@
 #!/usr/bin/env bash
 
 function setup() {
-
-
-
-    # Export required ENV vars
-    export OS_USERNAME=$NOVA_USERNAME
-    export OS_PASSWORD=$NOVA_PASSWORD
-    export OS_TENANT_NAME=$NOVA_PROJECT_ID
-    export OS_AUTH_URL=$NOVA_URL
-
+    # Setup variables for testing
     export TEST_TENANT="exerTenant"
     export TEST_USER="exerUser"
     export TEST_ROLE="exerRole"
@@ -102,6 +94,7 @@ function 030_tenant_details() {
 
 function 035_tenant_disable() {
     SKIP_TEST=1
+    SKIP_MSG="Skipping pending https://bugs.launchpad.net/keystone/+bug/976947"
     # bug 976947
     # patched in https://review.openstack.org/#/c/6517/
     # disable tenant (currently command succeeds but the disable actually fails as of keystone folsom-1) 
@@ -285,6 +278,7 @@ function 410_endpoint_list() {
 function 420_endpoint_details() {
 # seems to always fail regardless of flags. Will file bug
     SKIP_TEST=1
+    SKIP_MSG="Skipping: Still need to file bug"
     if ! keystone endpoint-get --service $TEST_SERVICE_ID ; then
         echo "could not get endpoint details"
         return 1
@@ -305,6 +299,7 @@ function 500_ec2creds_create() {
 function 510_ec2creds_list() {
     # FIXME(darren)not sure why this fails, but command is working
     SKIP_TEST=1
+    SKIP_MSG="Skipping: This test still needs work"
     if ! keystone ec2-credentials-list | grep "$EC2CREDS_ACCESS_ID" ; then
         echo "could not list ec2creds"
         return 1
@@ -312,7 +307,7 @@ function 510_ec2creds_list() {
 }
 
 function 520_ec2creds_details() {
-    if ! keystone ec2-credentials-get --access $EC2CREDS_ACCESS_ID ; then
+    if ! keystone ec2-credentials-get --user ${TEST_USER_ID} --access ${EC2CREDS_ACCESS_ID} ; then
         echo "could not get ec2creds details"
         return 1
     fi
@@ -355,8 +350,8 @@ echo
 
     keystone tenant-delete $TEST_TENANT_ID
     keystone role-delete $TEST_ROLE_ID
-    keystone service-delete $TEST_SERVICE_ID
     keystone endpoint-delete $TEST_ENDPOINT_ID
+    keystone service-delete $TEST_SERVICE_ID
     keystone ec2-credentials-delete --access $EC2CREDS_ACCESS_ID
     
 }

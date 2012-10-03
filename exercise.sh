@@ -10,7 +10,10 @@ SKIP_MSG=""
 
 # FIXME: make command-line option override ENV
 PACKAGESET=${1:-${PACKAGESET:-"diablo-final"}}
+shift
+TESTSCRIPTS=$@
 BASEDIR=$(dirname $(readlink -f ${0}))
+ONESHOT=${ONESHOT-0}
 
 set -u
 
@@ -143,7 +146,20 @@ set | grep ' ()' | cut -d' ' -f1 |sort > ${TMPDIR}/fn_pre.txt
 
 echo "Running test suite for packageset \"${PACKAGESET}\""
 
-for d in ${BASEDIR}/exercises/*.sh; do
+if [ "${TESTSCRIPTS}" == "" ]; then
+    TESTSCRIPTS="*.sh"
+fi
+
+TESTS=""
+pushd ${BASEDIR}/exercises > /dev/null 2>&1
+for d in ${TESTSCRIPTS}; do
+    for f in $(ls ${d}); do
+	TESTS+="${BASEDIR}/exercises/${f} "
+    done
+done
+popd > /dev/null 2>&1
+
+for d in ${TESTS}; do
     testname=$(basename ${d} .sh)
 
     echo -e "\n=== ${testname} ===\n"
@@ -158,7 +174,23 @@ for d in ${BASEDIR}/exercises/*.sh; do
     source ${d}
     if $(set | grep -q 'setup ()'); then
 	# not in a subshell, so globals can be modified
-	setup > /dev/null 2>&1
+	FAIL_REASON="Setup function failed"
+	echo "======== TEST SETUP FOR ${d} =========" > ${TMPDIR}/test.txt
+
+	set -E
+	trap "status=\$?; trap - ERR; if [ ! -z \${FUNCNAME-} ]; then return \$status; fi" ERR
+	status=0
+	eval "set -x; setup; set +x" >> ${TMPDIR}/test.txt 2>&1
+	trap - ERR
+	set +E
+
+	if [ $status -ne 0 ]; then
+	    colourise red -n "FAIL: ${FAIL_REASON}"
+	    echo
+	    FAILED=$(( ${FAILED} + 1 ))
+	    cat ${TMPDIR}/test.txt >> ${TMPDIR}/notice.txt
+	    continue
+	fi
     fi
 
     # find all the functions defined in the newly sourced file.
@@ -207,6 +239,14 @@ for d in ${BASEDIR}/exercises/*.sh; do
 		echo >> ${TMPDIR}/notice.txt
 
 		FAILED=$(( ${FAILED} + 1 ))
+        if [ $ONESHOT -eq 1 ]; then
+            echo; echo "ONESHOT ACTIVATED!"; echo
+            if [ -e ${TMPDIR}/notice.txt ]; then
+                colourise red ERROR TEST OUTPUT
+                cat ${TMPDIR}/notice.txt
+            fi
+            exit 1
+        fi
 		colourise ${resultcolour} " ${result}"
 	    elif [ $SKIP_TEST -eq 0 ]; then
 		result=$(printf "%0.3fs" "${elapsed}")
@@ -254,9 +294,11 @@ echo
 
 echo
 
-if [ "$FAILED" -ne "0" ] && [ -e ${TMPDIR}/notice.txt ]; then
-    colourise red ERROR TEST OUTPUT
-    cat ${TMPDIR}/notice.txt
+if [ "$FAILED" -ne "0" ]; then
+    if [ -e ${TMPDIR}/notice.txt ]; then
+	colourise red ERROR TEST OUTPUT
+	cat ${TMPDIR}/notice.txt
+    fi
     exit 1
 fi
 
