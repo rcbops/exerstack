@@ -514,7 +514,7 @@ function 200_nova_keypair-delete() {
     fi
 }
 
-function 201_nova_secgroup-delete-group-rule() {
+function 220_nova_secgroup-delete-group-rule() {
     # usage: nova secgroup-delete-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
     #                                     [--to_port <to_port>] <secgroup> <source_group>
     nova secgroup-delete-group-rule --ip_proto tcp --from_port 80 --to_port 80 $SECGROUP $SOURCE_SECGROUP
@@ -524,7 +524,16 @@ function 201_nova_secgroup-delete-group-rule() {
     fi
 }
 
-function 202_nova_secgroup-delete-rule() {
+function 222_nova_secgroup-delete-group-rule-folsom() {
+    # usage: nova secgroup-delete-group-rule [<secgroup> <source_group> <ip_proto> <from_port> <to_port>
+    nova secgroup-delete-group-rule $SECGROUP $SOURCE_SECGROUP tcp 80 80
+    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep $SOURCE_SECGROUP; do sleep 1; done"; then
+        echo "Security group rule not added"
+        return 1
+    fi
+}
+
+function 230_nova_secgroup-delete-rule() {
     # usage: nova secgroup-delete-rule <secgroup> <ip_proto> <from_port> <to_port> <cidr>
     nova secgroup-delete-rule $SECGROUP tcp 22 22 0.0.0.0/0
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
@@ -538,7 +547,7 @@ function 202_nova_secgroup-delete-rule() {
     fi
 }
 
-function 203_nova_secgroup-delete() {
+function 240_nova_secgroup-delete() {
   # usage: nova secgroup-delete <secgroup>
     nova secgroup-delete $SECGROUP
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list | grep $SECGROUP; do sleep 1; done"; then
