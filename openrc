@@ -19,6 +19,8 @@ GLANCE_HOST=${GLANCE_HOST:-$HOST_IP}
 # set to tenant_name, not tenant_id.
 export NOVA_PROJECT_ID=${NOVA_PROJECT_ID:-openstack}
 
+# later versions of the client attempt to use a keyring. let's override this
+export OS_NO_CACHE=1
 # In addition to the owning entity (tenant), nova stores the entity performing
 # the action as the **user**.
 export NOVA_USERNAME=${NOVA_USERNAME:-admin}
