@@ -179,6 +179,15 @@ function 032_nova_secgroup-add-group-rule() {
     fi
 }
 
+function 033_nova_secgroup-add-group-rule-folsom() {
+    # usage: nova secgroup-add-group-rule <secgroup> <source_group> <ip_proto> <from_port> <to_port>]
+    nova --no-cache secgroup-add-group-rule $SECGROUP $SOURCE_SECGROUP tcp 80 80
+    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova --no-cache secgroup-list-rules $SECGROUP | grep $SOURCE_SECGROUP; do sleep 1; done"; then
+        echo "Security group rule not added"
+        return 1
+    fi
+}
+
 function 040_nova_keypair-add() {
     # usage: nova keypair-add [--pub_key <pub_key>] <name>
     nova keypair-add $TEST_KEY_NAME > $TMPDIR/$TEST_PRIV_KEY
@@ -278,7 +287,7 @@ function 054_nova_remove-floating-ip() {
         SKIP_MSG="No floating ips"
         return 1
     fi
-    
+
     # usage: nova remove-floating-ip <server> <address>
     nova remove-floating-ip ${image_id} ${ip}
 
