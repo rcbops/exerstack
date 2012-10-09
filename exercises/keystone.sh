@@ -217,19 +217,40 @@ function 230_role_details() {
 }
 
 function 240_role_user_add() {
-    keystone user-role-add --user $TEST_USER_ID  --role $TEST_ROLE_ID --tenant_id $TEST_TENANT_ID;
-    if ! keystone role-list --user $TEST_USER_ID --tenant_id $TEST_TENANT_ID| grep $TEST_ROLE_ID; then
-        echo "unable to assign role to user"
-        return 1
+
+    if [[ $PACKAGESET < "folsom" ]]; then
+        keystone user-role-add --user $TEST_USER_ID  --role $TEST_ROLE_ID --tenant_id $TEST_TENANT_ID;
+        if ! keystone role-list --user $TEST_USER_ID --tenant_id $TEST_TENANT_ID| grep $TEST_ROLE_ID; then
+            echo "unable to assign role to user"
+            return 1
+        fi
+    else
+        keystone user-role-add --user-id $TEST_USER_ID  --role-id $TEST_ROLE_ID --tenant-id $TEST_TENANT_ID;
+        if ! keystone user-role-list --user-id $TEST_USER_ID --tenant-id $TEST_TENANT_ID| grep $TEST_ROLE_ID; then
+            echo "unable to assign role to user"
+            return 1
+        fi
     fi
+
 }
 
 function 250_role_user_remove() {
-    keystone user-role-remove --user $TEST_USER_ID  --role $TEST_ROLE_ID --tenant_id $TEST_TENANT_ID
-    if keystone role-list --user $TEST_USER_ID --tenant_id $TEST_TENANT_ID| grep $TEST_ROLE_ID; then
-        echo "unable to remove role from user"
-        return 1
+
+    if [[ $PACKAGESET < "folsom" ]]; then
+        keystone user-role-remove --user $TEST_USER_ID  --role $TEST_ROLE_ID --tenant_id $TEST_TENANT_ID
+        if keystone role-list --user $TEST_USER_ID --tenant_id $TEST_TENANT_ID| grep $TEST_ROLE_ID; then
+            echo "unable to remove role from user"
+            return 1
+        fi
+    else
+        keystone user-role-remove --user-id $TEST_USER_ID  --role-id $TEST_ROLE_ID --tenant-id $TEST_TENANT_ID
+        if keystone user-role-list --user-id $TEST_USER_ID --tenant-id $TEST_TENANT_ID| grep $TEST_ROLE_ID; then
+            echo "unable to remove role from user"
+            return 1
+        fi
     fi
+
+
 }
 
 
@@ -290,7 +311,14 @@ function 420_endpoint_details() {
 #### ec2 creds ####
 
 function 500_ec2creds_create() {
-    if ! EC2CREDS_ACCESS_ID=$(keystone ec2-credentials-create --user $TEST_USER_ID --tenant_id $TEST_TENANT_ID | grep access | awk '{print $4}'); then
+
+    if [[ $PACKAGESET < "folsom" ]]; then
+        EC2CREDS_ACCESS_ID=$(keystone ec2-credentials-create --user $TEST_USER_ID --tenant_id $TEST_TENANT_ID | grep access | awk '{print $4}')
+    else
+        EC2CREDS_ACCESS_ID=$(keystone ec2-credentials-create --user-id $TEST_USER_ID --tenant-id $TEST_TENANT_ID | grep access | awk '{print $4}')
+    fi
+ 
+    if [[ -z ${EC2CREDS_ACCESS_ID} ]]; then
         echo "could not create ec2 credentials"
         return 1
     fi  
@@ -307,9 +335,19 @@ function 510_ec2creds_list() {
 }
 
 function 520_ec2creds_details() {
-    if ! keystone ec2-credentials-get --user ${TEST_USER_ID} --access ${EC2CREDS_ACCESS_ID} ; then
-        echo "could not get ec2creds details"
-        return 1
+
+    if [[ $PACKAGESET < "folsom" ]]; then
+        if ! keystone ec2-credentials-get --user ${TEST_USER_ID} --access ${EC2CREDS_ACCESS_ID} ; then
+            echo "creds=$EC2CREDS_ACCESS_ID"
+            echo "could not get ec2creds details"
+            return 1
+        fi
+    else
+        if ! keystone ec2-credentials-get --user-id ${TEST_USER_ID} --access ${EC2CREDS_ACCESS_ID} ; then
+            echo "creds=$EC2CREDS_ACCESS_ID"
+            echo "could not get ec2creds details"
+            return 1
+        fi
     fi
 }
 

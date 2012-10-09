@@ -104,9 +104,16 @@ function 031_glance_update() {
 function 900_glance_delete-ENV_VARS() {
     local image_id=$(echo $IMAGE_ID| awk -F ": " '{print $2}')
 
-    if ! glance delete --force $image_id; then
-        echo "Unable to delete image from glance with ID: ${image_id}"
-        return 1
+    if [[ $PACKAGESET < "folsom" ]]; then
+        if ! glance delete --force $image_id; then
+            echo "Unable to delete image from glance with ID: ${image_id}"     
+            return 1
+        fi
+    else
+        if ! glance -f delete $image_id; then
+            echo "Unable to delete image from glance with ID: ${image_id}"     
+            return 1
+        fi
     fi
 }
 
