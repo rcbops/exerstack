@@ -3,58 +3,34 @@
 function setup() {
     # Max time to wait while vm goes from build to active state
     ACTIVE_TIMEOUT=${ACTIVE_TIMEOUT:-60}
-
     # Max time till the vm is bootable
     BOOT_TIMEOUT=${BOOT_TIMEOUT:-60}
-
     # Max time to wait for suspend/pause/resume
     SUSPEND_TIMEOUT=$(( BOOT_TIMEOUT + ACTIVE_TIMEOUT ))
-
     # Max time to wait for a reboot
     REBOOT_TIMEOUT=$(( ( ACTIVE_TIMEOUT * 2 ) + BOOT_TIMEOUT ))
-
     # Max time to wait for proper association and dis-association.
     ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-15}
-
     # Default username to use with ssh
     DEFAULT_SSH_USER=${DEFAULT_SSH_USER:-root}
-
     # Default volume name
     DEFAULT_VOLUME_NAME=${DEFAULT_VOLUME_NAME:-test-volume}
-
     # Instance name
     DEFAULT_INSTANCE_NAME=${DEFAULT_INSTANCE_NAME:-test_nova_cli_instance}
-
     # Instance type to create
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
-
     # Boot this image, use first AMi image if unset
     DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-$(nova image-list | awk '{ print $4 }' | grep "\-image" | head -n1)}
-
     # Name for snapshot
     DEFAULT_SNAP_NAME=${DEFAULT_SNAP_NAME:-${DEFAULT_IMAGE_NAME}-snapshot}
-
     # Find the instance type ID
     INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
-
     # Find an image to spin
     IMAGE=$(nova image-list|egrep $DEFAULT_IMAGE_NAME|head -1|cut -d" " -f2)
-
-    # Define secgroup
-    SECGROUP=${SECGROUP:-test_nova_cli_secgroup}
-
-    # Define a source_secgroup
-    SOURCE_SECGROUP=${SOURCE_SECGROUP:-default}
-
     # Define the network name to use for ping/ssh tests
     DEFAULT_NETWORK_NAME=${DEFAULT_NETWORK_NAME:-public}
-
     # Default floating IP pool name
     DEFAULT_FLOATING_POOL=${DEFAULT_FLOATING_POOL:-nova}
-
-    # Additional floating IP pool and range
-    TEST_FLOATING_POOL=${TEST_FLOATING_POOL:-test}
-
     # Default SSH OPTIONS
     SSH_OPTS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
 
@@ -62,9 +38,6 @@ function setup() {
     TEST_KEY_NAME=${TEST_KEY_NAME:-nova_test_key}
     TEST_PRIV_KEY=${TEST_PRIV_KEY:-$TEST_KEY_NAME.pem}
     # TEST_PUB_KEY=${TEST_PUB_KEY:-$TEST_KEY_NAME.pub}
-
-
-
 
     # create a volume group if we don't already have one to test on
     if ! vgdisplay cinder-volumes ; then
@@ -75,23 +48,21 @@ function setup() {
         service cinder-volume restart
         sleep 5
     fi
-
-
 }
 
-#    absolute-limits     Print a list of absolute limits for a user
-#    create              Add a new volume.
-#    credentials         Show user credentials returned from auth
+#######    absolute-limits     Print a list of absolute limits for a user
+#######   create              Add a new volume.
+#######    credentials         Show user credentials returned from auth
 #    delete              Remove a volume.
-#    endpoints           Discover endpoints that get returned from the
+#######    endpoints           Discover endpoints that get returned from the
 #                        authenticate services
-#    list                List all the volumes.
+#######    list                List all the volumes.
 #    quota-class-show    List the quotas for a quota class.
 #    quota-class-update  Update the quotas for a quota class.
-#    quota-defaults      List the default quotas for a tenant.
-#    quota-show          List the quotas for a tenant.
+#######    quota-defaults      List the default quotas for a tenant.
+#######    quota-show          List the quotas for a tenant.
 #    quota-update        Update the quotas for a tenant.
-#    rate-limits         Print a list of rate limits for a user
+#######    rate-limits         Print a list of rate limits for a user
 #    rename              Rename a volume.
 #    show                Show details about a volume.
 #    snapshot-create     Add a new snapshot.
@@ -104,11 +75,71 @@ function setup() {
 #    type-list           Print a list of available 'volume types'.
 #    bash-completion     Prints all of the commands and options to stdout so
 
-function 010_cinder_create() {
-    if ! cinder create --display-name ${DEFAULT_VOLUME_NAME} 1 ; then
-        echo "Unable to create volume ${DEFAULT_VOLUME_NAME}"
+
+function 010_cinder_limits() {
+    if ! cinder absolute-limits; then
+        echo "could not get api limits"
+    fi
+}
+
+function 020_cinder_credentials() {
+    if ! cinder credentials; then
+        echo "could not get cinder credentials"
+    fi
+
+}
+
+function 030_cinder_endpoints() {
+    if ! cinder endpoints; then
+        echo "could not get endpoints"
+    fi
+}
+
+function 040_cinder_quota_defaults() {
+    if ! cinder quota-defaults ${OS_TENANT_NAME}; then
+        echo "could not get default quotas for tenant ${OS_TENANT_NAME}"
+    fi
+}
+
+function 050_cinder_quota_show() {
+    if ! cinder quota-show ${OS_TENANT_NAME}; then
+        echo "could not get actual quotas for tenant ${OS_TENANT_NAME}"
+    fi
+}
+
+function 060_cinder_quota_update() {
+    CURRENT_VOLUME_QUOTA=$(cinder quota-show ${OS_TENANT_NAME}|grep -i volumes|cut -d'|' -f 3|sed -e 's/ //g')
+    TARGET_VOLUME_QUOTA=$(( CURRENT_VOLUME_QUOTA +1 ))
+    cinder quota-update --volumes ${TARGET_VOLUME_QUOTA} ${OS_TENANT_NAME}
+    NEW_VOLUME_QUOTA=$(cinder quota-show ${OS_TENANT_NAME}|grep -i volumes|cut -d'|' -f 3|sed -e 's/ //g')
+
+    if [ ${NEW_VOLUME_QUOTA} != ${TARGET_VOLUME_QUOTA} ]; then
+        echo "could not update quotas for tenant"
+    fi
+}
+ 
+function 070_cinder_rate_limits() {
+    if ! cinder rate-limits ${OS_TENANT_NAME}; then
+        echo "could not get actual quotas for tenant ${OS_TENANT_NAME}"
+    fi
+}
+
+function 100_cinder_create() {
+    if VOLUME_ID=$(cinder create --display-name ${DEFAULT_VOLUME_NAME} 1 | grep ' id ' | cut -d'|'  -f 3) ; then
+        if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! cinder list | grep ${DEFAULT_VOLUME_NAME} | grep available ; do sleep 1 ; done"; then
+	    echo "volume ${DEFAULT_VOLUME_NAME} did not become available in ${ASSOCIATE_TIMEOUT} seconds"
+            return 1
+        fi
+    else
+	echo "Unable to create volume ${DEFAULT_VOLUME_NAME}"
         return 1
     fi
+}
+
+function 110_cinder_show() {
+    if ! cinder show ${VOLUME_ID}; then
+        echo "could not get details on the test volume"
+        fi
 }
 
 
@@ -146,3 +177,11 @@ function 010_cinder_create() {
 #
 #    timeout ${ACTIVE_TIMEOUT} sh -c "ssh ${ip} -i $TMPDIR/$TEST_PRIV_KEY ${SSH_OPTS} -l ${DEFAULT_SSH_USER} -- id";
 #}
+
+function teardown() {
+    cinder delete ${VOLUME_ID}
+    vgremove cinder-volumes
+    rm -fr ${TMPDIR}/cinder-volumes
+    losetup -d /dev/loop3
+}        
+
