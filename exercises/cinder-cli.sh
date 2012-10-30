@@ -73,6 +73,7 @@ function setup() {
         pvcreate /dev/loop3
         vgcreate cinder-volumes /dev/loop3
         service cinder-volume restart
+        sleep 5
     fi
 
 
