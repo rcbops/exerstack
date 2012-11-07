@@ -10,7 +10,7 @@ function setup() {
     # Max time to wait for a reboot
     REBOOT_TIMEOUT=$(( ( ACTIVE_TIMEOUT * 2 ) + BOOT_TIMEOUT ))
     # Max time to wait for proper association and dis-association.
-    ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-15}
+    ASSOCIATE_TIMEOUT=${ASSOCIATE_TIMEOUT:-30}
     # Default username to use with ssh
     DEFAULT_SSH_USER=${DEFAULT_SSH_USER:-root}
     # Default volume name
@@ -21,8 +21,8 @@ function setup() {
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
     # Boot this image, use first AMi image if unset
     DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-$(nova image-list | awk '{ print $4 }' | grep "\-image" | head -n1)}
-    # Name for snapshot
-    DEFAULT_SNAP_NAME=${DEFAULT_SNAP_NAME:-${DEFAULT_IMAGE_NAME}-snapshot}
+    # Name for volume snapshot
+    DEFAULT_VOLUME_SNAP_NAME=${DEFAULT_VOLUME_SNAP_NAME:-test-volume-snapshot}
     # Find the instance type ID
     INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
     # Find an image to spin
@@ -41,7 +41,7 @@ function setup() {
 
     # create a volume group if we don't already have one to test on
     if ! vgdisplay cinder-volumes ; then
-        dd if=/dev/zero of=${TMPDIR}/cinder-volumes bs=1 count=0 seek=2G
+        dd if=/dev/zero of=${TMPDIR}/cinder-volumes bs=1 count=0 seek=6G
         losetup /dev/loop3 ${TMPDIR}/cinder-volumes
         pvcreate /dev/loop3
         vgcreate cinder-volumes /dev/loop3
@@ -127,11 +127,11 @@ function 070_cinder_rate_limits() {
 function 100_cinder_create() {
     if VOLUME_ID=$(cinder create --display-name ${DEFAULT_VOLUME_NAME} 1 | grep ' id ' | cut -d'|'  -f 3) ; then
         if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! cinder list | grep ${DEFAULT_VOLUME_NAME} | grep available ; do sleep 1 ; done"; then
-	    echo "volume ${DEFAULT_VOLUME_NAME} did not become available in ${ASSOCIATE_TIMEOUT} seconds"
+            echo "volume ${DEFAULT_VOLUME_NAME} did not become available in ${ASSOCIATE_TIMEOUT} seconds"
             return 1
         fi
     else
-	echo "Unable to create volume ${DEFAULT_VOLUME_NAME}"
+        echo "Unable to create volume ${DEFAULT_VOLUME_NAME}"
         return 1
     fi
 }
@@ -139,8 +139,45 @@ function 100_cinder_create() {
 function 110_cinder_show() {
     if ! cinder show ${VOLUME_ID}; then
         echo "could not get details on the test volume"
-        fi
+    fi
 }
+
+function 120_cinder_snapshot_create() {
+    if  SNAPSHOT_ID=$(cinder snapshot-create --display-name ${DEFAULT_VOLUME_SNAP_NAME} ${VOLUME_ID} | grep ' id ' | cut -d'|' -f3); then
+        if ! timeout ${ASSOCIATE_TIMEOUT} sh -c "while ! cinder snapshot-list | grep ${DEFAULT_VOLUME_SNAP_NAME} | grep available ; do sleep 1 ; done"; then
+            echo "volume snapshot ${DEFAULT_VOLUME_SNAP_NAME} did not become available in ${ASSOCIATE_TIMEOUT} seconds"
+            return 1
+        fi
+    else
+        echo "could not create snapshot of volume ${VOLUME_ID}"
+        return 1
+    fi
+}
+    
+function 130_cinder_snapshot_delete() {
+    if cinder snapshot-delete ${SNAPSHOT_ID}; then
+        if ! timeout 30 sh -c "while cinder snapshot-show ${SNAPSHOT_ID} ; do sleep 1 ; done"; then
+            echo "snapshot did not get deleted properly within ${ASSOCIATE_TIMEOUT} seconds"
+            return 1
+        fi
+    else
+        echo "could not delete snapshot ${SNAPSHOT_ID}"
+        return 1
+    fi
+}
+
+function 180_cinder_delete() {
+    if cinder delete ${VOLUME_ID}; then
+        if ! timeout 30 sh -c "while cinder show ${VOLUME_ID} ; do sleep 1 ; done"; then
+            echo "volume did not get deleted properly within ${ASSOCIATE_TIMEOUT} seconds"
+            return 1
+        fi
+    else
+        echo "could not deletevolume  ${VOLUME_ID}"
+        return 1
+    fi
+}
+
 
 
 #function 050_nova-boot() {
@@ -179,9 +216,9 @@ function 110_cinder_show() {
 #}
 
 function teardown() {
-    cinder delete ${VOLUME_ID}
-    vgremove cinder-volumes
-    rm -fr ${TMPDIR}/cinder-volumes
-    losetup -d /dev/loop3
-}        
-
+#    cinder delete ${VOLUME_ID}
+#    vgremove cinder-volumes
+#    rm -fr ${TMPDIR}/cinder-volumes
+#_    losetup -d /dev/loop3
+return 0
+}       
