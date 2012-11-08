@@ -12,13 +12,19 @@ function setup() {
     # Name for volume snapshot
     DEFAULT_VOLUME_SNAP_NAME=${DEFAULT_VOLUME_SNAP_NAME:-test-volume-snapshot}
 
+    if [ -e /etc/redhat-release ]; then
+        CINDER_VOLUME_SERVICE='openstack-cinder-volume'
+    else
+        CINDER_VOLUME_SERVICE='cinder-volume'
+    fi
+
     # create a faked volume group for testing, if we don't already have one
     if ! vgdisplay cinder-volumes ; then
         dd if=/dev/zero of=${TMPDIR}/cinder-volumes bs=1 count=0 seek=6G
         losetup /dev/loop3 ${TMPDIR}/cinder-volumes
         pvcreate /dev/loop3
         vgcreate cinder-volumes /dev/loop3
-        service cinder-volume restart
+        service ${CINDER_VOLUME_SERVICE} restart
         sleep 5
     fi
 }
