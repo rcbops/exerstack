@@ -297,10 +297,14 @@ function 410_endpoint_list() {
 }
 
 function 420_endpoint_details() {
-# seems to always fail regardless of flags. Will file bug
-    SKIP_TEST=1
-    SKIP_MSG="Skipping: Still need to file bug"
-    if ! keystone endpoint-get --service $TEST_SERVICE_ID ; then
+
+    if [[ $PACKAGESET < "folsom" ]]; then
+        # seems to always fail regardless of flags. Will file bug
+        SKIP_TEST=1
+        SKIP_MSG="Skipping: problems in essex"
+    fi
+
+    if ! keystone endpoint-get --service ${TEST_SERVICE_TYPE} ; then
         echo "could not get endpoint details"
         return 1
     fi
