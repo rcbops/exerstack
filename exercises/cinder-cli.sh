@@ -2,13 +2,11 @@
 
 function setup() {
     # Max time to wait for volume operations (specifically create and delete)
-    VOLUME_TIMEOUT=${DELETE_TIMEOUT:-60}
+    VOLUME_TIMEOUT=${VOLUME_TIMEOUT:-60}
     # Default volume name
     DEFAULT_VOLUME_NAME=${DEFAULT_VOLUME_NAME:-test-volume}
     # Default volume name
     DEFAULT_TYPE_NAME=${DEFAULT_TYPE_NAME:-test-type}
-    # Boot this image, use first AMi image if unset
-    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-$(nova image-list | awk '{ print $4 }' | grep "\-image" | head -n1)}
     # Name for volume snapshot
     DEFAULT_VOLUME_SNAP_NAME=${DEFAULT_VOLUME_SNAP_NAME:-test-volume-snapshot}
 
@@ -173,7 +171,7 @@ function 120_cinder_snapshot-create() {
 
 function 130_cinder_snapshot-delete() {
     if cinder snapshot-delete ${SNAPSHOT_ID}; then
-        if ! timeout 30 sh -c "while cinder snapshot-show ${SNAPSHOT_ID} ; do sleep 1 ; done"; then
+        if ! timeout ${VOLUME_TIMEOUT} sh -c "while cinder snapshot-show ${SNAPSHOT_ID} ; do sleep 1 ; done"; then
             echo "snapshot did not get deleted properly within ${VOLUME_TIMEOUT} seconds"
             return 1
         fi
@@ -185,7 +183,7 @@ function 130_cinder_snapshot-delete() {
 
 function 180_cinder_delete() {
     if cinder delete ${VOLUME_ID}; then
-        if ! timeout 30 sh -c "while cinder show ${VOLUME_ID} ; do sleep 1 ; done"; then
+        if ! timeout ${VOLUME_TIMEOUT} sh -c "while cinder show ${VOLUME_ID} ; do sleep 1 ; done"; then
             echo "volume did not get deleted properly within ${VOLUME_TIMEOUT} seconds"
             return 1
         fi
