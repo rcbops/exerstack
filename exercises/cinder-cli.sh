@@ -2,7 +2,7 @@
 
 function setup() {
     # Max time to wait for volume operations (specifically create and delete)
-    VOLUME_TIMEOUT=${VOLUME_TIMEOUT:-60}
+    VOLUME_TIMEOUT=${VOLUME_TIMEOUT:-120}
     # Default volume name
     DEFAULT_VOLUME_NAME=${DEFAULT_VOLUME_NAME:-test-volume}
     # Default volume name
