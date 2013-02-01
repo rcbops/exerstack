@@ -70,11 +70,12 @@ function 050_associate_floating_ip() {
     FLOATING_IP=$(euca-allocate-address | cut -d" " -f2)
 
     EUCA_HAS_FLOATING=1
-    if [[ ${FLOATING_IP} =~ "Zero" ||  ${FLOATING_IP} =~ "None" ]]; then
-	EUCA_HAS_FLOATING=0
-	SKIP_MSG="No floating ips"
-	SKIP_TEST=1
-	return 1
+    if [[ ${FLOATING_IP} =~ "Zero" ||  ${FLOATING_IP} =~ "None" || ${FLOATING_IP} =~ "An" ]]; then
+        # An may just be an error so let's skip the tests...
+	    EUCA_HAS_FLOATING=0
+	    SKIP_MSG="No floating ips"
+	    SKIP_TEST=1
+	    return 1
     fi
 
     # Associate floating address
