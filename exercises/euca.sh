@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-EUCA_HAS_FLOATING=0
 
 function setup() {
     # Max time to wait while vm goes from build to active state
@@ -70,13 +69,12 @@ function 050_associate_floating_ip() {
     # other variances that we don't about yet.
     FLOATING_IP=$(euca-allocate-address | cut -d" " -f2)
 
+    EUCA_HAS_FLOATING=1
     if [[ ${FLOATING_IP} =~ "Zero" ||  ${FLOATING_IP} =~ "None" ]]; then
-	    EUCA_HAS_FLOATING=0
-	    SKIP_MSG="No floating ips"
-	    SKIP_TEST=1
-	    return 1
-    else
-        EUCA_HAS_FLOATING=1
+	EUCA_HAS_FLOATING=0
+	SKIP_MSG="No floating ips"
+	SKIP_TEST=1
+	return 1
     fi
 
     # Associate floating address
