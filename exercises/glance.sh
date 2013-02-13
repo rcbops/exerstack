@@ -56,16 +56,11 @@ function 011_glance_delete-TOKEN() {
 }
 
 function 030_glance_add-ENV_VARS() {
-
-    ADD_CMD="glance add name="${TMP_IMAGE_NAME}-ENV" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}"
-
-    if ! IMAGE_ID=$(${ADD_CMD}); then
+    if ! IMAGE_ID=$(glance add name="${TMP_IMAGE_NAME}-ENV" is_public=true container_format=ami disk_format=ami < ${TMP_IMAGE_FILE}); then
         echo "Failed to upload image using the glance add command"
         return 1
     fi
-
-    local image_id=$(echo "${IMAGE_ID}" | awk -F ": " '{print $2}')
-
+    local image_id=$(echo $IMAGE_ID| awk -F ": " '{print $2}')
     if ! glance show ${image_id} | grep Status | grep active; then
         echo "Image uploaded but not marked as active"
         return 1
@@ -73,7 +68,7 @@ function 030_glance_add-ENV_VARS() {
 }
 
 function 035_glance_update() {
-    local image_id=$(echo "${IMAGE_ID}" | awk -F ": " '{print $2}')
+    local image_id=$(echo $IMAGE_ID| awk -F ": " '{print $2}')
 
     if ! glance update $image_id arch='x86_64' distro='Ubuntu'; then
         echo "glance update failed"
@@ -123,7 +118,6 @@ function 040_glance_delete-ENV_VARS() {
     fi
 }
 
-
 function 060_glance_image-add_new-syntax() {
 
     ADD_CMD="glance image-create --name ${TMP_IMAGE_NAME}-ENV --is-public true --container-format ami --disk-format ami --file ${TMP_IMAGE_FILE}"
@@ -140,7 +134,6 @@ function 060_glance_image-add_new-syntax() {
         return 1
     fi
 }
-
 
 function 065_glance_image-update_new-syntax() {
     local image_id=$(echo "${IMAGE_ID}" | grep ' id ' | cut -d '|' -f 3)
