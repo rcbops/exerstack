@@ -133,10 +133,12 @@ function 040_tenant_update() {
 function 110_user_create() {
     
     # add a user
-    if ! TEST_USER_ID=$(keystone user-create --name $TEST_USER --tenant_id $TEST_TENANT_ID | grep id | awk '{print $4}') ; then
+    if ! TMP_USER_ID=$(keystone user-create --name $TEST_USER --tenant_id $TEST_TENANT_ID --pass testpass) ; then
         echo "could not create user $TEST_USER"
         return 1
     fi
+
+    TEST_USER_ID=$(echo $TMP_USER_ID | awk '{print $20}')
 
     # make sure we can't create the same user again
     if keystone user-create --name $TEST_USER --tenant_id $TEST_TENANT_ID ; then
