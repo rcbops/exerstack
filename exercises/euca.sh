@@ -99,7 +99,7 @@ function 055_verify_ssh_key() {
     if [ ${EUCA_HAS_FLOATING} -eq 0 ]; then
         if [[ ${EUCA_VERSION} < "2\.0\.0" ]]; then
             ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
-        elif [[ ${EUCA_VERSION} >= "2\.0\.0" ]]; then
+        elif [[ ${EUCA_VERSION} > "2\.0\.0" ]]; then
             ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f17)
         fi
     fi
