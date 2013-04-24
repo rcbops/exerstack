@@ -120,7 +120,7 @@ function 040_glance_delete-ENV_VARS() {
 
 function 060_glance_image-add_new-syntax() {
 
-    ADD_CMD="glance image-create --name ${TMP_IMAGE_NAME}-ENV --is-public true --container-format ami --disk-format ami --file ${TMP_IMAGE_FILE}"
+    ADD_CMD="glance image-create --name ${TMP_IMAGE_NAME}-ENV --is-public true --container-format ami --disk-format ami --file ${TMP_IMAGE_FILE} --size 0"
 
     if ! IMAGE_ID=$(${ADD_CMD}); then
         echo "Failed to upload image using the glance add command"
