@@ -33,7 +33,7 @@ function 010_add_secgroup() {
         euca-add-group -d "$EUCA_SECGROUP description" $EUCA_SECGROUP
         if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! euca-describe-groups | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
             echo "Security group not created"
-	    return 1
+        return 1
         fi
     fi
 }
@@ -58,7 +58,7 @@ function 040_launch_instance() {
     # Assure it has booted within a reasonable time
     if ! timeout $RUNNING_TIMEOUT sh -c "while ! euca-describe-instances $EUCA_INSTANCE | grep -q running; do if euca-describe-instances $EUCA_INSTANCE | grep -q error; then return 1; fi; sleep 1; done"; then
         echo "server didn't become active within $RUNNING_TIMEOUT seconds"
-	return 1
+        return 1
     fi
 }
 
@@ -72,10 +72,10 @@ function 050_associate_floating_ip() {
     EUCA_HAS_FLOATING=1
     if [[ ${FLOATING_IP} =~ "Zero" ||  ${FLOATING_IP} =~ "None" || ${FLOATING_IP} =~ "An" || "${FLOATING_IP}" = "" ]]; then
         # An may just be an error so let's skip the tests...
-	    EUCA_HAS_FLOATING=0
-	    SKIP_MSG="No floating ips"
-	    SKIP_TEST=1
-	    return 1
+        EUCA_HAS_FLOATING=0
+        SKIP_MSG="No floating ips"
+        SKIP_TEST=1
+        return 1
     fi
 
     # Associate floating address
@@ -84,7 +84,7 @@ function 050_associate_floating_ip() {
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! ping -c1 -w1 $FLOATING_IP; do sleep 1; done"; then
         echo "Couldn't ping server with floating ip"
-	return 1
+        return 1
     fi
 }
 
@@ -97,22 +97,22 @@ function 055_verify_ssh_key() {
     local ip=${FLOATING_IP}
 
     if [ ${EUCA_HAS_FLOATING} -eq 0 ]; then
-        if [[ ${EUCA_VERSION} < "2\.0\.0" ]]; then
-            ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
-        elif [[ ${EUCA_VERSION} > "2\.0\.0" ]]; then
+        if [[ ${EUCA_VERSION} == "2.0.0" ]] || [[ ${EUCA_VERSION} > "2\.0\.0" ]]; then
             ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f17)
+        elif [[ ${EUCA_VERSION} < "2\.0\.0" ]]; then
+            ip=$(euca-describe-instances | grep "$EUCA_INSTANCE" | cut -f4)
         fi
     fi
 
     # Test we can ping our floating ip within ASSOCIATE_TIMEOUT seconds
     if ! timeout $(( BOOT_TIMEOUT + ASSOCIATE_TIMEOUT )) sh -c "while ! ping -c1 -w1 $ip; do sleep 1; done"; then
         echo "Couldn't ping server with floating/local ip after $(( BOOT_TIMEOUT + ASSOCIATE_TIMEOUT )) seconds"
-	return 1
+        return 1
     fi
 
     if ! timeout ${BOOT_TIMEOUT} sh -c "while ! nc ${ip} 22 -w 1 < /dev/null; do sleep 1; done"; then
-	echo "port 22 never became available after ${BOOT_TIMEOUT} seconds"
-	return 1
+        echo "port 22 never became available after ${BOOT_TIMEOUT} seconds"
+        return 1
     fi
 
     timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
@@ -127,7 +127,7 @@ function 060_disassociate_floating_ip() {
     # Wait just a tick for everything above to complete so release doesn't fail
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-addresses | grep $EUCA_INSTANCE | grep -q $FLOATING_IP; do sleep 1; done"; then
         echo "Floating ip $FLOATING_IP not disassociated within $ASSOCIATE_TIMEOUT seconds"
-	return 1
+        return 1
     fi
 }
 
@@ -158,7 +158,7 @@ function 085_remove_security_group() {
 
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-groups | grep -q $EUCA_SECGROUP; do sleep 1; done"; then
         echo "Security group not deleted"
-	return 1
+        return 1
     fi
 }
 
@@ -171,6 +171,6 @@ function 090_release_floating() {
     # Wait just a tick for everything above to complete so terminate doesn't fail
     if ! timeout $ASSOCIATE_TIMEOUT sh -c "while euca-describe-addresses | grep -q $FLOATING_IP; do sleep 1; done"; then
         echo "Floating ip $FLOATING_IP not released within $ASSOCIATE_TIMEOUT seconds"
-	return 1
+        return 1
     fi
 }
