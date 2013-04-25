@@ -136,6 +136,10 @@ function 060_glance_image-add_new-syntax() {
 }
 
 function 065_glance_image-update_new-syntax() {
+    SKIP_TEST=1
+    SKIP_MSG='image-update with no-tty borken pending new glanceclient packages bug #1166263'
+    return 1
+
     local image_id=$(echo "${IMAGE_ID}" | grep ' id ' | cut -d '|' -f 3)
 
     if ! glance --debug image-update --property 'arch=x86_64' --property 'distro=Ubuntu' $image_id ; then
