@@ -120,7 +120,7 @@ function 040_glance_delete-ENV_VARS() {
 
 function 060_glance_image-add_new-syntax() {
 
-    ADD_CMD="glance image-create --name ${TMP_IMAGE_NAME}-ENV --is-public true --container-format ami --disk-format ami --file ${TMP_IMAGE_FILE}"
+    ADD_CMD="glance --debug image-create --name ${TMP_IMAGE_NAME}-ENV --is-public true --container-format ami --disk-format ami --file ${TMP_IMAGE_FILE}"
 
     if ! IMAGE_ID=$(${ADD_CMD}); then
         echo "Failed to upload image using the glance add command"
@@ -129,7 +129,7 @@ function 060_glance_image-add_new-syntax() {
 
     local image_id=$(echo "${IMAGE_ID}" | grep ' id ' | cut -d '|' -f 3)
 
-    if ! glance image-show ${image_id} | grep status | grep active; then
+    if ! glance --debug image-show ${image_id} | grep status | grep active; then
         echo "Image uploaded but not marked as active"
         return 1
     fi
@@ -138,33 +138,33 @@ function 060_glance_image-add_new-syntax() {
 function 065_glance_image-update_new-syntax() {
     local image_id=$(echo "${IMAGE_ID}" | grep ' id ' | cut -d '|' -f 3)
 
-    if ! glance image-update --property 'arch=x86_64' --property 'distro=Ubuntu' $image_id ; then
+    if ! glance --debug image-update --property 'arch=x86_64' --property 'distro=Ubuntu' $image_id ; then
         echo "glance update failed"
         return 1
     fi
 
     # verify that the expected metadata is there
-    if ! glance image-show $image_id | grep 'arch'|grep 'x86_64'; then
+    if ! glance --debug image-show $image_id | grep 'arch'|grep 'x86_64'; then
         echo "Property 'arch' not set properly"
         return 1
     fi
-    if ! glance image-show $image_id | grep 'distro'|grep 'Ubuntu'; then
+    if ! glance --debug image-show $image_id | grep 'distro'|grep 'Ubuntu'; then
         echo "Property 'distro' not set properly"
         return 1
     fi
 
     # Update and replace metadata
-    if ! glance image-update --property 'arch=i386' --purge-props $image_id; then
+    if ! glance --debug image-update --property 'arch=i386' --purge-props $image_id; then
         echo "glance update failed"
         return 1
     fi
 
     # verify that the expected metadata is there
-    if ! glance image-show $image_id | grep 'arch'| grep 'i386'; then
+    if ! glance --debug image-show $image_id | grep 'arch'| grep 'i386'; then
         echo "Property 'arch' not set properly"
         return 1
     fi
-    if glance image-show $image_id | grep 'distro'|grep 'Ubuntu'; then
+    if glance --debug image-show $image_id | grep 'distro'|grep 'Ubuntu'; then
         echo "Property 'distro' not deleted properly"
         return 1
     fi
@@ -173,13 +173,13 @@ function 065_glance_image-update_new-syntax() {
 function 070_glance_image-delete_new-syntax() {
     local image_id=$(echo "${IMAGE_ID}" | grep ' id ' | cut -d '|' -f 3)
 
-    if ! glance image-delete $image_id; then
+    if ! glance --debug image-delete $image_id; then
         echo "Unable to delete image from glance with ID: ${image_id}"
             return 1
     fi
 
     # make sure it's gone
-    if glance image-list | grep $image_id ; then
+    if glance --debug image-list | grep $image_id ; then
         echo "image has not actually been removed properly from glance"
         return 1
     fi
