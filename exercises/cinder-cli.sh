@@ -51,6 +51,9 @@ function setup() {
 
 
 function 010_cinder_limits() {
+    SKIP_TEST=1
+    SKIP_MSG='pending cinderclient bug 1180059'
+    return 1
     if ! cinder absolute-limits; then
         echo "could not get api limits"
         return 1
@@ -118,6 +121,9 @@ function 068_cinder_quota-class-update() {
 }
 
 function 070_cinder_rate-limits() {
+    SKIP_TEST=1
+    SKIP_MSG='pending cinderclient bug 1180059'
+    return 1
     if ! cinder rate-limits ; then
         echo "could not get actual quotas for tenant ${OS_TENANT_NAME}"
         return 1
