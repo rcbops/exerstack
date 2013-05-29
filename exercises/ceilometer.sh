@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 function setup() {
-
-    pass
+    USER=$(ceilometer user-list|egrep -v '^\+'|tail -1|cut -d' ' -f2)
+    PROJECT=$(ceilometer project-list|egrep -v '^\+'|tail -1|cut -d' ' -f2)
 }
 
 #   meter-list          List the user's meter
@@ -24,15 +24,24 @@ function 010_meter-list() {
     fi
 }
 
-function 020_project-list() {
+function 020_meter-list_for_user() {
 
-    if ! ceilometer project-list; then
-        echo "Could not get project-list from ceilometer"
+    if ! ceilometer meter-list -u ${USER}; then
+        echo "Could not get meter-list from ceilometer for user ${USER}"
         return 1
     fi
 }
 
-function 030_resource-list() {
+function 030_meter-list_for_project() {
+
+    if ! ceilometer meter-list -p ${PROJECT}; then
+        echo "Could not get meter-list from ceilometer for user ${USER}"
+        return 1
+    fi
+}
+
+
+function 040_resource-list() {
 
     if ! ceilometer resource-list; then
         echo "Could not get resource-list from ceilometer"
@@ -40,7 +49,31 @@ function 030_resource-list() {
     fi
 }
 
-function 040_sample-list() {
+function 050_resource-list_for_user() {
+
+    if ! ceilometer resource-list -u ${USER}; then
+        echo "Could not get resource-list from ceilometer for user ${USER}"
+        return 1
+    fi
+}
+
+function 060_resource-list_for_project() {
+
+    if ! ceilometer resource-list -p ${PROJECT}; then
+        echo "Could not get resource-list from ceilometer for user ${USER}"
+        return 1
+    fi
+}
+
+function 070_project-list() {
+
+    if ! ceilometer project-list; then
+        echo "Could not get project-list from ceilometer"
+        return 1
+    fi
+}
+
+function 080_sample-list() {
 
     if ! ceilometer sample-list; then
         echo "Could not get sample-list from ceilometer"
@@ -48,7 +81,7 @@ function 040_sample-list() {
     fi
 }
 
-function 050_user-list() {
+function 090_user-list() {
 
     if ! ceilometer user-list; then
         echo "Could not get user-list from ceilometer"
