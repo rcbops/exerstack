@@ -26,6 +26,12 @@ function 010_meter-list() {
 
 function 020_meter-list_for_user() {
 
+    if [ -z $USER ]; then
+        SKIP_TEST=1
+        SKIP_MSG='No ceilometer user registered'
+        return 1
+    fi
+
     if ! ceilometer meter-list -u ${USER}; then
         echo "Could not get meter-list from ceilometer for user ${USER}"
         return 1
@@ -33,6 +39,12 @@ function 020_meter-list_for_user() {
 }
 
 function 030_meter-list_for_project() {
+
+    if [ -z $PROJECT ]; then
+        SKIP_TEST=1
+        SKIP_MSG='No ceilometer project registered'
+        return 1
+    fi
 
     if ! ceilometer meter-list -p ${PROJECT}; then
         echo "Could not get meter-list from ceilometer for user ${USER}"
@@ -51,6 +63,12 @@ function 040_resource-list() {
 
 function 050_resource-list_for_user() {
 
+    if [ -z $USER ]; then
+        SKIP_TEST=1
+        SKIP_MSG='No ceilometer user registered'
+        return 1
+    fi
+
     if ! ceilometer resource-list -u ${USER}; then
         echo "Could not get resource-list from ceilometer for user ${USER}"
         return 1
@@ -58,6 +76,12 @@ function 050_resource-list_for_user() {
 }
 
 function 060_resource-list_for_project() {
+
+    if [ -z $PROJECT ]; then
+        SKIP_TEST=1
+        SKIP_MSG='No ceilometer project registered'
+        return 1
+    fi
 
     if ! ceilometer resource-list -p ${PROJECT}; then
         echo "Could not get resource-list from ceilometer for user ${USER}"
