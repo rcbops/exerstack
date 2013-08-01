@@ -8,6 +8,7 @@ export SUBNET_NAME2='a_new_subnet_name'
 export SUBNET_CIDR='192.168.57.0/24'
 export PORT_NAME='exerstack_test_port'
 export PORT_NAME2='a_new_port_name'
+export Q_SECGROUP_NAME='exerstack_test_security_group'
 }
 
 #  agent-delete                   Delete a given agent.
@@ -17,8 +18,8 @@ export PORT_NAME2='a_new_port_name'
 ####  dhcp-agent-list-hosting-net    List DHCP agents hosting a network.
 ####  dhcp-agent-network-add         Add a network to a DHCP agent.
 ####  dhcp-agent-network-remove      Remove a network from a DHCP agent.
-#  ext-list                       List all exts.
-#  ext-show                       Show information of a given resource
+####  ext-list                       List all exts.
+####  ext-show                       Show information of a given resource
 #  floatingip-associate           Create a mapping between a floating ip and a fixed ip.
 #  floatingip-create              Create a floating ip for a given tenant.
 #  floatingip-delete              Delete a given floating ip.
@@ -47,14 +48,10 @@ export PORT_NAME2='a_new_port_name'
 ####  port-list                      List ports that belong to a given tenant.
 ####  port-show                      Show information of a given port.
 ####  port-update                    Update port's information.
-#  queue-create                   Create a queue.
-#  queue-delete                   Delete a given queue.
-#  queue-list                     List queues that belong to a given tenant.
-#  queue-show                     Show information of a given queue.
-#  quota-delete                   Delete defined quotas of a given tenant.
-#  quota-list                     List defined quotas of all tenants.
-#  quota-show                     Show quotas of a given tenant
-#  quota-update                   Define tenant's quotas not to use defaults.
+####  quota-delete                   Delete defined quotas of a given tenant.
+####  quota-list                     List defined quotas of all tenants.
+####  quota-show                     Show quotas of a given tenant
+####  quota-update                   Define tenant's quotas not to use defaults.
 #  router-create                  Create a router for a given tenant.
 #  router-delete                  Delete a given router.
 #  router-gateway-clear           Remove an external network gateway from a router.
@@ -66,14 +63,14 @@ export PORT_NAME2='a_new_port_name'
 #  router-port-list               List ports that belong to a given tenant, with specified router
 #  router-show                    Show information of a given router.
 #  router-update                  Update router's information.
-#  security-group-create          Create a security group.
-#  security-group-delete          Delete a given security group.
-#  security-group-list            List security groups that belong to a given tenant.
-#  security-group-rule-create     Create a security group rule.
-#  security-group-rule-delete     Delete a given security group rule.
-#  security-group-rule-list       List security group rules that belong to a given tenant.
-#  security-group-rule-show       Show information of a given security group rule.
-#  security-group-show            Show information of a given security group.
+####  security-group-create          Create a security group.
+####  security-group-delete          Delete a given security group.
+####  security-group-list            List security groups that belong to a given tenant.
+####  security-group-rule-create     Create a security group rule.
+####  security-group-rule-delete     Delete a given security group rule.
+####  security-group-rule-list       List security group rules that belong to a given tenant.
+####  security-group-rule-show       Show information of a given security group rule.
+####  security-group-show            Show information of a given security group.
 ####  subnet-create                  Create a subnet for a given tenant.
 ####  subnet-delete                  Delete a given subnet.
 ####  subnet-list                    List networks that belong to a given tenant.
@@ -94,6 +91,20 @@ function 020_agent-show() {
         return 1
     fi
 
+}
+
+function 025_ext-list() {
+    if ! quantum ext-list; then
+        echo "could not list quantum extensions"
+        return 1
+    fi
+}
+
+function 028_ext-show() {
+    if ! quantum ext-show 'agent'; then
+        echo "could not get detailed information about agent extension "
+        return 1
+    fi
 }
 
 function 030_net-list() {
@@ -128,7 +139,7 @@ function 050_net-create() {
     fi
 }
 
-function 070_net-show() {
+function 060_net-show() {
     NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
     if ! quantum net-show  ${NETWORK_ID}; then
         echo "could not show network"
@@ -137,7 +148,7 @@ function 070_net-show() {
 
 }
 
-function 075_net-update() {
+function 070_net-update() {
     NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
     if ! quantum net-update ${NETWORK_ID} --name ${NETWORK_NAME2}; then
         echo "could not update network name"
@@ -151,8 +162,6 @@ function 075_net-update() {
 
     quantum net-update ${NETWORK_ID} --name ${NETWORK_NAME}
 }
-
-
 
 function 080_dhcp-agent-network-add() {
     if DHCP_AGENT_ID=$(quantum agent-list -f csv -c id -c agent_type|grep -i dhcp | tail -1 | cut -d'"' -f2); then
@@ -191,7 +200,6 @@ function 090_subnet-create() {
     fi
 }
 
-
 function 100_subnet-show() {
     SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -c id -f shell | cut -d'"' -f2)
     if ! quantum subnet-show  ${SUBNET_ID}; then
@@ -199,7 +207,6 @@ function 100_subnet-show() {
         return 1
     fi
 }
-
 
 function 110_subnet-update() {
     SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -c id -f shell | cut -d'"' -f2)
@@ -215,7 +222,6 @@ function 110_subnet-update() {
 
     quantum subnet-update ${SUBNET_ID} --name ${SUBNET_NAME}
 }
-
 
 function 120_port-create() {
     NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
@@ -254,7 +260,107 @@ function 140_port-update() {
     quantum port-update ${PORT_ID} --name ${PORT_NAME}
 }
 
-function 150_port-delete() {
+function 150_quota-update() {
+    CURRENT_SUBNET_QUOTA=$(quantum quota-show -c subnet -f shell | cut -d'"' -f2)
+    TARGET_SUBNET_QUOTA=$(( CURRENT_SUBNET_QUOTA +1 ))
+    quantum quota-update --subnet ${TARGET_SUBNET_QUOTA}
+    NEW_SUBNET_QUOTA=$(quantum quota-show -c subnet -f shell | cut -d'"' -f2)
+
+    if [ ${NEW_SUBNET_QUOTA} != ${TARGET_SUBNET_QUOTA} ]; then
+        echo "could not update quotas for tenant"
+        return 1
+    fi
+}
+
+function 160_quota-list() {
+    # separate quota for this tenant should now exist after changing a value above
+    if ! quantum quota-list -c subnet ; then
+        echo "could not list quotas for tenants"
+        return 1
+    fi
+}
+
+function 170_quota-show() {
+    if ! quantum quota-show; then
+        echo "could not show quotas for this tenant"
+        return 1
+    fi
+}
+
+function 180_security-group-create() {
+    if ! quantum security-group-create $Q_SECGROUP_NAME; then
+        echo "could not create security group"
+        return 1
+    fi
+    if ! quantum security-group-list -c name | grep ${Q_SECGROUP_NAME}; then
+        echo "security group was created but does not show in list output"
+        return 1
+    fi
+}
+
+function 190_security-group-show() {
+    if ! quantum security-group-show ${Q_SECGROUP_NAME}; then
+        echo "could not show details of security group ${Q_SECGROUP_NAME}"
+        return 1
+    fi
+}
+
+function 200_security-group-rule-create() {
+    if ! quantum security-group-rule-create --protocol icmp ${Q_SECGROUP_NAME}; then
+        echo "could not create security group rule"
+        return 1
+    fi
+    if ! quantum security-group-rule-list | grep ${Q_SECGROUP_NAME} | grep icmp; then
+        echo "created security group rule but can't see it in list output"
+        return 1
+    fi
+}
+
+function 210_security-group-rule-show() {
+    Q_SECGROUP_RULE_ID=$(quantum security-group-rule-list -f csv | grep ${Q_SECGROUP_NAME} | grep icmp | cut -d'"' -f2)
+    if ! quantum security-group-rule-show ${Q_SECGROUP_RULE_ID}; then
+        echo "could not show security group rule details"
+        return 1
+    fi
+}
+
+function 220_security-group-rule-delete() {
+    Q_SECGROUP_RULE_ID=$(quantum security-group-rule-list -f csv | grep ${Q_SECGROUP_NAME} | grep icmp | cut -d'"' -f2)
+    if ! quantum security-group-rule-delete ${Q_SECGROUP_RULE_ID}; then
+        echo "could not delete security group rule"
+        return 1
+    fi
+
+    if quantum security-group-rule-show ${Q_SECGROUP_RULE_ID}; then
+        echo "security group rule was deleted but still shows in output"
+        return 1
+    fi
+}
+
+function 300_security-group-delete() {
+    if ! quantum security-group-delete ${Q_SECGROUP_NAME}; then
+        echo "could not delete security group rule"
+        return 1
+    fi
+
+    if quantum security-group--show ${Q_SECGROUP_NAME}; then
+        echo "security group was deleted but still shows in output"
+        return 1
+    fi
+}
+
+function 310_quota-delete() {
+    if ! quantum quota-delete; then
+        echo "could not delete the quotas for this tenant"
+        return 1
+    fi
+    if quantum quota-list -c subnet; then
+        echo "quota was deleted, but is still showing in in list output"
+        return 1
+    fi
+}
+
+function 320_port-delete() {
     PORT_ID=$(quantum port-show ${PORT_NAME} -c id -f shell | cut -d'"' -f2)
     if ! quantum port-delete ${PORT_ID}; then
         echo "could not delete port ${PORT_ID}"
@@ -262,8 +368,7 @@ function 150_port-delete() {
     fi
 }
 
-
-function 280_subnet-delete() {
+function 330_subnet-delete() {
     SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -c id -f shell | cut -d'"' -f2)
     if ! quantum subnet-delete ${SUBNET_ID}; then
         echo "could not delete subnet"
@@ -271,8 +376,7 @@ function 280_subnet-delete() {
     fi
 }
 
-
-function 290_dhcp-agent-network-remove() {
+function 340_dhcp-agent-network-remove() {
     if DHCP_AGENT_ID=$(quantum agent-list -f csv -c id -c agent_type|grep -i dhcp | tail -1 | cut -d'"' -f2); then
         NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
         if ! quantum dhcp-agent-network-remove ${DHCP_AGENT_ID} ${NETWORK_ID}; then
@@ -291,8 +395,7 @@ function 290_dhcp-agent-network-remove() {
     fi
 }
 
-
-function 300_net-delete() {
+function 350_net-delete() {
     NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
     if ! quantum net-delete  ${NETWORK_ID}; then
         echo "could not delete network"
