@@ -24,6 +24,9 @@ function setup() {
 
     # Determine euca2ools version
     EUCA_VERSION=$(euca-version  | cut -d" " -f2)
+
+    # Default username to use with ssh
+    DEFAULT_SSH_USER=${DEFAULT_SSH_USER:-root}
 }
 
 
@@ -115,7 +118,7 @@ function 055_verify_ssh_key() {
         return 1
     fi
 
-    timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l root -- id
+    timeout ${ACTIVE_TIMEOUT} ssh ${ip} -i ${TMPDIR}/${EUCA_KEYPAIR}.pem -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -l ${DEFAULT_SSH_USER} -- id
 }
 
 function 060_disassociate_floating_ip() {
