@@ -42,7 +42,10 @@ function setup() {
     SOURCE_SECGROUP=${SOURCE_SECGROUP:-default}
 
     # Define the network name to use for ping/ssh tests
-    DEFAULT_NETWORK_NAME=${DEFAULT_NETWORK_NAME:-public}
+    DEFAULT_NETWORK_NAME=${DEFAULT_NETWORK_NAME:-vm}
+
+    # Define the subnet name to use assigning to vms
+    DEFAULT_SUBNET_NAME=${DEFAULT_SUBNET_NAME:-vm-subnet}
 
     # Default floating IP pool name
     DEFAULT_FLOATING_POOL=${DEFAULT_FLOATING_POOL:-nova}
@@ -62,45 +65,14 @@ function setup() {
 
     # neutron networks
 
-    NETWORK_ID=$(quantum net-create vm -c id -f shell | grep 'id=' | cut -d'"' -f2)
-    SUBNET_ID=$(quantum subnet-create --allocation-pool start=172.16.56.10,end=172.16.56.100 --name "vm" --no-gateway "vm" 172.16.56.0/24 -c id -f shell| grep 'id=' | cut -d'"' -f2)
+    NETWORK_ID=$(quantum net-create ${DEFAULT_NETWORK_NAME} -c id -f shell | grep 'id=' | cut -d'"' -f2)
+    SUBNET_ID=$(quantum subnet-create --allocation-pool start=172.16.56.10,end=172.16.56.100 --name ${DEFAULT_SUBNET_NAME} --no-gateway ${DEFAULT_NETWORK_NAME} 172.16.56.0/24 -c id -f shell| grep 'id=' | cut -d'"' -f2)
     ICMP_SECGROUP_RULE_ID=$(quantum security-group-rule-create --protocol icmp --direction ingress default -c id -f shell | grep 'id=' | cut -d'"' -f2)
     SSH_SECGROUP_RULE_ID=$(quantum security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 --direction ingress default -c id -f shell | grep 'id=' | cut -d'"' -f2)
     NETWORK_NS="qdhcp-${NETWORK_ID}"
 
 
 }
-
-#    actions             Retrieve server actions.
-#    add-fixed-ip        Add new IP address to network.
-#    diagnostics         Retrieve server diagnostics.
-#                        servers).
-#    image-create        Create a new image by taking a snapshot of a running
-#                        server.
-#    image-delete        Delete an image.
-#    image-meta          Set or Delete metadata on an image.
-#    meta                Set or Delete metadata on a server.
-#    migrate             Migrate a server.
-#    rebuild             Shutdown, re-image, and re-boot a server.
-#    remove-fixed-ip     Remove an IP address from a server.
-#    remove-floating-ip  Remove a floating IP address from a server.
-#    resize              Resize a server.
-#    resize-confirm      Confirm a previous resize.
-#    resize-revert       Revert a previous resize (and return to the previous
-#                        VM).
-#    root-password       Change the root password for a server.
-#    volume-attach       Attach a volume to a server.
-#    volume-create       Add a new volume.
-#    volume-delete       Remove a volume.
-#    volume-detach       Detach a volume from a server.
-#    volume-list         List all the volumes.
-#    volume-show         Show details about a volume.
-#    zone                Show or edit a child zone. No zone arg for this zone.
-#    zone-add            Add a new child zone.
-#    zone-boot           Boot a new server, potentially across Zones.
-#    zone-delete         Delete a zone.
-#    zone-info           Get this zones name and capabilities.
-#    zone-list           List the children of a zone.
 
 function 010_nova_image-list() {
     if ! nova image-list|egrep $DEFAULT_IMAGE_NAME; then
@@ -150,52 +122,6 @@ function 022_shared_key-nova-keypair-delete() {
     fi
 }
 
-#function 030_nova_secgroup-create() {
-#    # usage: nova secgroup-create <name> <description>
-#    if ! nova secgroup-list|grep $SECGROUP; then
-#        nova secgroup-create $SECGROUP "$SECGROUP description"
-#        if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list | grep $SECGROUP; do sleep 1; done"; then
-#            echo "Security group not created"
-#            return 1
-#        fi
-#    else
-#        echo "SECURITY GROUP: ${SECGROUP} already exists"
-#        return 1
-#    fi
-#}
-
-#function 031_nova_secgroup-add-rule() {
-#    # usage: nova secgroup-add-rule <secgroup> <ip_proto> <from_port> <to_port> <cidr>
-#    nova secgroup-add-rule $SECGROUP icmp -1 -1 0.0.0.0/0
-#    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep icmp; do sleep 1; done"; then
-#        echo "PING: Security group rule not added"
-#        return 1
-#    fi
-#
-#    nova secgroup-add-rule $SECGROUP tcp 22 22 0.0.0.0/0
-#    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
-#        echo "SSH: Security group rule not added"
-#        return 1
-#    fi
-#}
-#
-#function 032_nova_secgroup-add-group-rule() {
-#
-#   if [[ $PACKAGESET < "folsom" ]]; then
-#        # usage: nova secgroup-add-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
-#        #                                      [--to_port <to_port>] <secgroup> <source_group>
-#        nova secgroup-add-group-rule --ip_proto tcp --from_port 80 --to_port 80 $SECGROUP $SOURCE_SECGROUP
-#   else
-#        # usage: nova secgroup-add-group-rule <secgroup> <source_group> <ip_proto> <from_port> <to_port>]
-#        nova secgroup-add-group-rule $SECGROUP $SOURCE_SECGROUP tcp 80 80
-#   fi
-#
-#   if ! timeout $ASSOCIATE_TIMEOUT sh -c "while ! nova secgroup-list-rules $SECGROUP | grep $SOURCE_SECGROUP; do sleep 1; done"; then
-#        echo "Security group rule not added"
-#        return 1
-#   fi
-#}
-#
 function 040_nova_keypair-add() {
     # usage: nova keypair-add [--pub_key <pub_key>] <name>
     nova keypair-add $TEST_KEY_NAME > $TMPDIR/$TEST_PRIV_KEY
@@ -522,47 +448,6 @@ function 200_nova_keypair-delete() {
         return 1
     fi
 }
-
-#function 205_nova_secgroup-delete-group-rule() {
-#
-#    if [[ $PACKAGESET < "folsom" ]]; then
-#        # usage: nova secgroup-delete-group-rule [--ip_proto <ip_proto>] [--from_port <from_port>]
-#        #                                     [--to_port <to_port>] <secgroup> <source_group>
-#        nova secgroup-delete-group-rule --ip_proto tcp --from_port 80 --to_port 80 $SECGROUP $SOURCE_SECGROUP
-#    else
-#        # usage: nova secgroup-delete-group-rule <secgroup> <source_group> <ip_proto> <from_port> <to_port>
-#        nova secgroup-delete-group-rule $SECGROUP $SOURCE_SECGROUP tcp 80 80
-#    fi
-#
-#    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep $SOURCE_SECGROUP; do sleep 1; done"; then
-#        echo "Security group rule not added"
-#        return 1
-#    fi
-#}
-#
-#function 210_nova_secgroup-delete-rule() {
-#    # usage: nova secgroup-delete-rule <secgroup> <ip_proto> <from_port> <to_port> <cidr>
-#    nova secgroup-delete-rule $SECGROUP tcp 22 22 0.0.0.0/0
-#    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep tcp; do sleep 1; done"; then
-#        echo "SSH: Security group rule not deleted"
-#        return 1
-#    fi
-#    nova secgroup-delete-rule $SECGROUP icmp -1 -1 0.0.0.0/0
-#    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list-rules $SECGROUP | grep icmp; do sleep 1; done"; then
-#        echo "PING: Security group rule not deleted"
-#        return 1
-#    fi
-#}
-#
-
-#function 220_nova_secgroup-delete() {
-#  # usage: nova secgroup-delete <secgroup>
-#    nova secgroup-delete $SECGROUP
-#    if ! timeout $ASSOCIATE_TIMEOUT sh -c "while nova secgroup-list | grep $SECGROUP; do sleep 1; done"; then
-#        echo "Security group not deleted"
-#        return 1
-#    fi
-#}
 
 function teardown() {
     nova delete $DEFAULT_INSTANCE_NAME
