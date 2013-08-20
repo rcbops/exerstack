@@ -85,7 +85,7 @@ function 010_agent-list() {
 }
 
 function 020_agent-show() {
-    AGENT_ID=$(quantum agent-list -c id -f csv | tail -n 1 | cut -d '"' -f2)
+    AGENT_ID=$(quantum agent-list -f csv | tail -n 1 | cut -d '"' -f2)
     if ! quantum agent-show ${AGENT_ID}; then
         echo "could not get detailed information about agent ${AGENT_ID}"
         return 1
@@ -115,7 +115,7 @@ function 030_net-list() {
 }
 
 function 040_net-list-on-dhcp-agent() {
-    if DHCP_AGENT_ID=$(quantum agent-list -f csv -c id -c agent_type| grep -i dhcp | tail -1 | cut -d'"' -f2); then
+    if DHCP_AGENT_ID=$(quantum agent-list -f csv | grep -i dhcp | tail -1 | cut -d'"' -f2); then
         if ! quantum net-list-on-dhcp-agent ${DHCP_AGENT_ID}; then
             echo "could not list networks on dhcp agent ${DHCP_AGENT_ID}"
             return 1
@@ -140,7 +140,7 @@ function 050_net-create() {
 }
 
 function 060_net-show() {
-    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
+    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
     if ! quantum net-show  ${NETWORK_ID}; then
         echo "could not show network"
         return 1
@@ -149,13 +149,13 @@ function 060_net-show() {
 }
 
 function 070_net-update() {
-    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
+    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
     if ! quantum net-update ${NETWORK_ID} --name ${NETWORK_NAME2}; then
         echo "could not update network name"
         return 1
     fi
 
-    if ! [ "${NETWORK_NAME2}" = "$(quantum net-show -c name -f shell ${NETWORK_ID} | cut -d'"' -f2)" ]; then
+    if ! [ "${NETWORK_NAME2}" = "$(quantum net-show -f shell ${NETWORK_ID} | grep '^name=' | cut -d'"' -f2)" ]; then
         echo "network was not updated properly"
         return 1
     fi
@@ -164,8 +164,8 @@ function 070_net-update() {
 }
 
 function 080_dhcp-agent-network-add() {
-    if DHCP_AGENT_ID=$(quantum agent-list -f csv -c id -c agent_type|grep -i dhcp | tail -1 | cut -d'"' -f2); then
-        NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
+    if DHCP_AGENT_ID=$(quantum agent-list -f csv |grep -i dhcp | tail -1 | cut -d'"' -f2); then
+        NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
         if ! quantum dhcp-agent-network-add ${DHCP_AGENT_ID} ${NETWORK_ID}; then
             echo "could not add network ${NETWORK_ID} to dhcp agent ${DHCP_AGENT_ID}"
             return 1
@@ -187,7 +187,7 @@ function 080_dhcp-agent-network-add() {
 }
 
 function 090_subnet-create() {
-    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
+    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
 
     if ! quantum subnet-create --name ${SUBNET_NAME} ${NETWORK_ID} ${SUBNET_CIDR}; then
         echo "could not create subnet"
@@ -201,7 +201,7 @@ function 090_subnet-create() {
 }
 
 function 100_subnet-show() {
-    SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -c id -f shell | cut -d'"' -f2)
+    SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     if ! quantum subnet-show  ${SUBNET_ID}; then
         echo "could not show subnet"
         return 1
@@ -209,13 +209,13 @@ function 100_subnet-show() {
 }
 
 function 110_subnet-update() {
-    SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -c id -f shell | cut -d'"' -f2)
+    SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     if ! quantum subnet-update ${SUBNET_ID} --name ${SUBNET_NAME2}; then
         echo "could not update subnet name"
         return 1
     fi
 
-    if ! [ "${SUBNET_NAME2}" = "$(quantum subnet-show -c name -f shell ${SUBNET_ID} | cut -d'"' -f2)" ]; then
+    if ! [ "${SUBNET_NAME2}" = "$(quantum subnet-show -f shell ${SUBNET_ID} | grep '^name=' | cut -d'"' -f2)" ]; then
         echo "subnet was not updated properly"
         return 1
     fi
@@ -224,7 +224,7 @@ function 110_subnet-update() {
 }
 
 function 120_port-create() {
-    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
+    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
 
     if ! quantum port-create --name ${PORT_NAME} ${NETWORK_ID}; then
         echo "could not create port"
@@ -238,7 +238,7 @@ function 120_port-create() {
 }
 
 function 130_port-show() {
-    PORT_ID=$(quantum port-show ${PORT_NAME} -c id -f shell | cut -d'"' -f2)
+    PORT_ID=$(quantum port-show ${PORT_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     if ! quantum port-show  ${PORT_ID}; then
         echo "could not show port"
         return 1
@@ -246,13 +246,13 @@ function 130_port-show() {
 }
 
 function 140_port-update() {
-    PORT_ID=$(quantum port-show ${PORT_NAME} -c id -f shell | cut -d'"' -f2)
+    PORT_ID=$(quantum port-show ${PORT_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     if ! quantum port-update ${PORT_ID} --name ${PORT_NAME2}; then
         echo "could not update port name"
         return 1
     fi
 
-    if ! [ "${PORT_NAME2}" = "$(quantum port-show -c name -f shell ${PORT_ID} | cut -d'"' -f2)" ]; then
+    if ! [ "${PORT_NAME2}" = "$(quantum port-show -f shell ${PORT_ID} | grep '^name=' | cut -d'"' -f2)" ]; then
         echo "port was not updated properly"
         return 1
     fi
@@ -261,10 +261,10 @@ function 140_port-update() {
 }
 
 function 150_quota-update() {
-    CURRENT_SUBNET_QUOTA=$(quantum quota-show -c subnet -f shell | cut -d'"' -f2)
+    CURRENT_SUBNET_QUOTA=$(quantum quota-show -f shell | grep '^subnet=' | cut -d'"' -f2)
     TARGET_SUBNET_QUOTA=$(( CURRENT_SUBNET_QUOTA +1 ))
     quantum quota-update --subnet ${TARGET_SUBNET_QUOTA}
-    NEW_SUBNET_QUOTA=$(quantum quota-show -c subnet -f shell | cut -d'"' -f2)
+    NEW_SUBNET_QUOTA=$(quantum quota-show -f shell |  grep '^subnet=' | cut -d'"' -f2)
 
     if [ ${NEW_SUBNET_QUOTA} != ${TARGET_SUBNET_QUOTA} ]; then
         echo "could not update quotas for tenant"
@@ -274,7 +274,7 @@ function 150_quota-update() {
 
 function 160_quota-list() {
     # separate quota for this tenant should now exist after changing a value above
-    if ! quantum quota-list -c subnet ; then
+    if ! quantum quota-list ; then
         echo "could not list quotas for tenants"
         return 1
     fi
@@ -292,7 +292,7 @@ function 180_security-group-create() {
         echo "could not create security group"
         return 1
     fi
-    if ! quantum security-group-list -c name | grep ${Q_SECGROUP_NAME}; then
+    if ! quantum security-group-list | grep ${Q_SECGROUP_NAME}; then
         echo "security group was created but does not show in list output"
         return 1
     fi
@@ -354,14 +354,14 @@ function 310_quota-delete() {
         echo "could not delete the quotas for this tenant"
         return 1
     fi
-    if quantum quota-list -c subnet; then
+    if quantum quota-list | grep 'subnet'; then
         echo "quota was deleted, but is still showing in in list output"
         return 1
     fi
 }
 
 function 320_port-delete() {
-    PORT_ID=$(quantum port-show ${PORT_NAME} -c id -f shell | cut -d'"' -f2)
+    PORT_ID=$(quantum port-show ${PORT_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     if ! quantum port-delete ${PORT_ID}; then
         echo "could not delete port ${PORT_ID}"
         return 1
@@ -369,7 +369,7 @@ function 320_port-delete() {
 }
 
 function 330_subnet-delete() {
-    SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -c id -f shell | cut -d'"' -f2)
+    SUBNET_ID=$(quantum subnet-show ${SUBNET_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     if ! quantum subnet-delete ${SUBNET_ID}; then
         echo "could not delete subnet"
         return 1
@@ -377,8 +377,8 @@ function 330_subnet-delete() {
 }
 
 function 340_dhcp-agent-network-remove() {
-    if DHCP_AGENT_ID=$(quantum agent-list -f csv -c id -c agent_type|grep -i dhcp | tail -1 | cut -d'"' -f2); then
-        NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
+    if DHCP_AGENT_ID=$(quantum agent-list -f csv |grep -i dhcp | tail -1 | cut -d'"' -f2); then
+        NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
         if ! quantum dhcp-agent-network-remove ${DHCP_AGENT_ID} ${NETWORK_ID}; then
             echo "could not remove network from dhcp agent"
         fi
@@ -396,7 +396,7 @@ function 340_dhcp-agent-network-remove() {
 }
 
 function 350_net-delete() {
-    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -c id -f shell | cut -d'"' -f2)
+    NETWORK_ID=$(quantum net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
     if ! quantum net-delete  ${NETWORK_ID}; then
         echo "could not delete network"
         return 1
