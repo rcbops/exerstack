@@ -65,10 +65,10 @@ function setup() {
 
     # neutron networks
 
-    NETWORK_ID=$(quantum net-create ${DEFAULT_NETWORK_NAME} -c id -f shell | grep 'id=' | cut -d'"' -f2)
-    SUBNET_ID=$(quantum subnet-create --allocation-pool start=172.16.56.10,end=172.16.56.100 --name ${DEFAULT_SUBNET_NAME} --no-gateway ${DEFAULT_NETWORK_NAME} 172.16.56.0/24 -c id -f shell| grep 'id=' | cut -d'"' -f2)
-    ICMP_SECGROUP_RULE_ID=$(quantum security-group-rule-create --protocol icmp --direction ingress default -c id -f shell | grep 'id=' | cut -d'"' -f2)
-    SSH_SECGROUP_RULE_ID=$(quantum security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 --direction ingress default -c id -f shell | grep 'id=' | cut -d'"' -f2)
+    NETWORK_ID=$(quantum net-create ${DEFAULT_NETWORK_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
+    SUBNET_ID=$(quantum subnet-create --allocation-pool start=172.16.56.10,end=172.16.56.100 --name ${DEFAULT_SUBNET_NAME} --no-gateway ${DEFAULT_NETWORK_NAME} 172.16.56.0/24 -f shell| grep '^id=' | cut -d'"' -f2)
+    ICMP_SECGROUP_RULE_ID=$(quantum security-group-rule-create --protocol icmp --direction ingress default -f shell | grep '^id=' | cut -d'"' -f2)
+    SSH_SECGROUP_RULE_ID=$(quantum security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 --direction ingress default -f shell | grep '^id=' | cut -d'"' -f2)
     NETWORK_NS="qdhcp-${NETWORK_ID}"
 
 
