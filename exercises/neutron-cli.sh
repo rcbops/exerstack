@@ -168,28 +168,30 @@ function 070_net-update() {
     ${NEUTRON_BIN} net-update ${NETWORK_ID} --name ${NETWORK_NAME}
 }
 
-function 080_dhcp-agent-network-add() {
-    if DHCP_AGENT_ID=$(${NEUTRON_BIN} agent-list -f csv |grep -i dhcp | tail -1 | cut -d'"' -f2); then
-        NETWORK_ID=$(${NEUTRON_BIN} net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
-        if ! ${NEUTRON_BIN} dhcp-agent-network-add ${DHCP_AGENT_ID} ${NETWORK_ID}; then
-            echo "could not add network ${NETWORK_ID} to dhcp agent ${DHCP_AGENT_ID}"
-            return 1
-        fi
-        if ! ${NEUTRON_BIN} net-list-on-dhcp-agent ${DHCP_AGENT_ID} | grep ${NETWORK_ID}; then
-            echo "network was added to dhcp agent, but does not show in it's listing"
-            return 1
-        fi
-        if ! ${NEUTRON_BIN} dhcp-agent-list-hosting-net ${NETWORK_ID} | grep ${DHCP_AGENT_ID}; then
-            echo "network was added to dhcp agent, but does not show in list of agents hosting this network"
-        return 1
-        fi
+# This races with the rpcdaemon functionality
+#
+# function 080_dhcp-agent-network-add() {
+#     if DHCP_AGENT_ID=$(${NEUTRON_BIN} agent-list -f csv |grep -i dhcp | tail -1 | cut -d'"' -f2); then
+#         NETWORK_ID=$(${NEUTRON_BIN} net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
+#         if ! ${NEUTRON_BIN} dhcp-agent-network-add ${DHCP_AGENT_ID} ${NETWORK_ID}; then
+#             echo "could not add network ${NETWORK_ID} to dhcp agent ${DHCP_AGENT_ID}"
+#             return 1
+#         fi
+#         if ! ${NEUTRON_BIN} net-list-on-dhcp-agent ${DHCP_AGENT_ID} | grep ${NETWORK_ID}; then
+#             echo "network was added to dhcp agent, but does not show in it's listing"
+#             return 1
+#         fi
+#         if ! ${NEUTRON_BIN} dhcp-agent-list-hosting-net ${NETWORK_ID} | grep ${DHCP_AGENT_ID}; then
+#             echo "network was added to dhcp agent, but does not show in list of agents hosting this network"
+#         return 1
+#         fi
 
-    else
-        SKIP_TEST=1
-        SKIP_MSG="no dhcp agents to list networks for"
-        return 1
-    fi
-}
+#     else
+#         SKIP_TEST=1
+#         SKIP_MSG="no dhcp agents to list networks for"
+#         return 1
+#     fi
+# }
 
 function 090_subnet-create() {
     NETWORK_ID=$(${NEUTRON_BIN} net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
@@ -381,24 +383,28 @@ function 330_subnet-delete() {
     fi
 }
 
-function 340_dhcp-agent-network-remove() {
-    if DHCP_AGENT_ID=$(${NEUTRON_BIN} agent-list -f csv |grep -i dhcp | tail -1 | cut -d'"' -f2); then
-        NETWORK_ID=$(${NEUTRON_BIN} net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
-        if ! ${NEUTRON_BIN} dhcp-agent-network-remove ${DHCP_AGENT_ID} ${NETWORK_ID}; then
-            echo "could not remove network from dhcp agent"
-        fi
-        if ${NEUTRON_BIN} dhcp-agent-list-hosting-net ${NETWORK_ID} | grep ${DHCP_AGENT_ID}; then
-            echo "network was removed from dhcp agent but still shows in network's listing"
-        fi
-        if ${NEUTRON_BIN} net-list-on-dhcp-agent ${DHCP_AGENT_ID} | grep ${NETWORK_ID}; then
-            echo "network was removed from dhcp agent but still shows in agent'slisting"
-        fi
-    else
-        SKIP_TEST=1
-        SKIP_MSG="no dhcp agents to remove networks from"
-        return 1
-    fi
-}
+# This races with the rpcdaemon functionality -- rpcdaemon will pop the dhcp
+# back onto the dhcp agent.  Testing for this behavior might be a resonable
+# test to add, actually.  Left as an exercise for the reader.
+#
+# function 340_dhcp-agent-network-remove() {
+#     if DHCP_AGENT_ID=$(${NEUTRON_BIN} agent-list -f csv |grep -i dhcp | tail -1 | cut -d'"' -f2); then
+#         NETWORK_ID=$(${NEUTRON_BIN} net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
+#         if ! ${NEUTRON_BIN} dhcp-agent-network-remove ${DHCP_AGENT_ID} ${NETWORK_ID}; then
+#             echo "could not remove network from dhcp agent"
+#         fi
+#         if ${NEUTRON_BIN} dhcp-agent-list-hosting-net ${NETWORK_ID} | grep ${DHCP_AGENT_ID}; then
+#             echo "network was removed from dhcp agent but still shows in network's listing"
+#         fi
+#         if ${NEUTRON_BIN} net-list-on-dhcp-agent ${DHCP_AGENT_ID} | grep ${NETWORK_ID}; then
+#             echo "network was removed from dhcp agent but still shows in agent'slisting"
+#         fi
+#     else
+#         SKIP_TEST=1
+#         SKIP_MSG="no dhcp agents to remove networks from"
+#         return 1
+#     fi
+# }
 
 function 350_net-delete() {
     NETWORK_ID=$(${NEUTRON_BIN} net-show ${NETWORK_NAME} -f shell |grep '^id=' | cut -d'"' -f2)
