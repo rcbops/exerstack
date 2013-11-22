@@ -200,12 +200,14 @@ for d in ${TESTS}; do
 
     # run each test
     for test in ${fnlist}; do
-	[[ ${test} =~ "setup" ]] && continue
-	[[ ${test} =~ "teardown" ]] && continue
 
-    	printf " %-${COLSIZE}s" "${test}"
+    # Skip functions that don't start with a number.
+    # This includes setup and teardown and allows for utility functions
+    # within exercise scripts.
+	[[ ! ${test} =~ ^[0-9] ]] && continue
+
+    printf " %-${COLSIZE}s" "${test}"
 	SKIP_MSG=""
-
 	SKIP_TEST=0
 
 	if should_run ${testname} ${test}; then
