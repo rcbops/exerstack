@@ -138,6 +138,7 @@ function colourise() {
     fi
 }
 
+[[ -z $(which bc) ]] && echo "Test timings will not be calculated as bc is not available"
 
 declare -A test_config
 source testmap.conf
