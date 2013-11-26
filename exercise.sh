@@ -138,6 +138,7 @@ function colourise() {
     fi
 }
 
+[[ -z $(which bc) ]] && echo "Test timings will not be calculated as bc is not available"
 
 declare -A test_config
 source testmap.conf
@@ -172,7 +173,11 @@ for d in ${TESTS}; do
     fi
 
     source ${d}
-    if $(set | grep -q 'setup ()'); then
+
+    # don't use grep -q as it causes grep to quit after the first match and
+    # send SIGPIPE to the source. The source is bash (set builtin) which
+    # doesn't handle the signal properly.
+    if $(set | grep 'setup ()' &>/dev/null); then
 	# not in a subshell, so globals can be modified
 	FAIL_REASON="Setup function failed"
 	echo "======== TEST SETUP FOR ${d} =========" > ${TMPDIR}/test.txt
@@ -200,12 +205,14 @@ for d in ${TESTS}; do
 
     # run each test
     for test in ${fnlist}; do
-	[[ ${test} =~ "setup" ]] && continue
-	[[ ${test} =~ "teardown" ]] && continue
 
-    	printf " %-${COLSIZE}s" "${test}"
+    # Skip functions that don't start with a number.
+    # This includes setup and teardown and allows for utility functions
+    # within exercise scripts.
+	[[ ! ${test} =~ ^[0-9] ]] && continue
+
+    printf " %-${COLSIZE}s" "${test}"
 	SKIP_MSG=""
-
 	SKIP_TEST=0
 
 	if should_run ${testname} ${test}; then
