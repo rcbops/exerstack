@@ -173,7 +173,11 @@ for d in ${TESTS}; do
     fi
 
     source ${d}
-    if $(set | grep -q 'setup ()'); then
+
+    # don't use grep -q as it causes grep to quit after the first match and
+    # send SIGPIPE to the source. The source is bash (set builtin) which
+    # doesn't handle the signal properly.
+    if $(set | grep 'setup ()' &>/dev/null); then
 	# not in a subshell, so globals can be modified
 	FAIL_REASON="Setup function failed"
 	echo "======== TEST SETUP FOR ${d} =========" > ${TMPDIR}/test.txt
