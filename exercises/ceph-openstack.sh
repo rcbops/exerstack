@@ -12,6 +12,8 @@ function setup() {
     DEFAULT_INSTANCE_NAME=${DEFAULT_INSTANCE_NAME:-test-instance}
     # Name for volume snapshot
     DEFAULT_VOLUME_SNAP_NAME=${DEFAULT_VOLUME_SNAP_NAME:-test-volume-snapshot}
+    DEFAULT_IMAGE_POOL=${DEFAULT_IMAGE_POOL:-images}
+    DEFAULT_VOLUME_POOL=${DEFAULT_VOLUME_POOL:-volumes}
 }
 
 function 010_glance_image_create() {
@@ -30,7 +32,14 @@ function 010_glance_image_create() {
     fi
 }
 
-function 020_cinder_volume_create() {
+function 020_rbd_info_for_image() {
+    if ! rbd -p ${DEFAULT_IMAGE_POOL} info ${IMAGE_ID}; then
+        echo "No rbd image found for glance image ${IMAGE_ID}"
+        return 1
+    fi
+}
+
+function 030_cinder_volume_create() {
     if VOLUME_ID=$(cinder create --image-id ${IMAGE_ID} --display-name ${DEFAULT_VOLUME_NAME} 1 | grep ' id ' | cut -d'|'  -f 3) ; then
         if ! timeout ${DEFAULT_TIMEOUT} sh -c "while ! cinder list | grep ${DEFAULT_VOLUME_NAME} | grep available ; do sleep 1 ; done"; then
             echo "instance ${DEFAULT_VOLUME_NAME} did not become available in ${DEFAULT_TIMEOUT} seconds"
@@ -42,7 +51,21 @@ function 020_cinder_volume_create() {
     fi
 }
 
-function 030_nova_boot() {
+function 040_rbd_info_for_volume() {
+    if ! rbd -p ${DEFAULT_VOLUME_POOL} info volume-$(echo ${VOLUME_ID} | tr -d ' '); then
+        echo "No rbd image found for cinder volume ${VOLUME_ID}"
+        return 1
+    fi
+}
+
+function 050_rbd_children_for_image() {
+    if ! rbd -p ${DEFAULT_IMAGE_POOL} children --snap snap --image ${IMAGE_ID}; then
+        echo "volume does not appear to be a child of ${IMAGE_ID}'s snapshot"
+        return 1
+    fi
+}
+
+function 060_nova_boot() {
     if INSTANCE_ID=$(nova boot --boot-volume ${VOLUME_ID} --flavor 1 ${DEFAULT_INSTANCE_NAME} | grep ' id ' | cut -d'|'  -f 3) ; then
         if ! timeout ${DEFAULT_TIMEOUT} sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE ; do sleep 1 ; done"; then
             echo "volume ${DEFAULT_INSTANCE_NAME} did not become available in ${DEFAULT_TIMEOUT} seconds"
@@ -53,7 +76,7 @@ function 030_nova_boot() {
     fi
 }
 
-function 040_nova_delete() {
+function 070_nova_delete() {
     # usage: nova delete <server>
     nova delete ${INSTANCE_ID}
     if ! timeout $DEFAULT_TIMEOUT sh -c "while nova list | grep ${INSTANCE_ID}; do sleep 1; done"; then
@@ -62,7 +85,7 @@ function 040_nova_delete() {
     fi
 }
 
-function 100_cinder_delete() {
+function 080_cinder_delete() {
     if cinder delete ${VOLUME_ID}; then
         if ! timeout ${DEFAULT_TIMEOUT} sh -c "while cinder show ${VOLUME_ID} ; do sleep 1 ; done"; then
             echo "volume did not get deleted properly within ${DEFAULT_TIMEOUT} seconds"
@@ -74,7 +97,7 @@ function 100_cinder_delete() {
     fi
 }
 
-function 110_glance_image_delete() {
+function 090_glance_image_delete() {
     if ! glance --debug image-delete $IMAGE_ID; then
         echo "Unable to delete image from glance with ID: ${IMAGE_ID}"
             return 1
