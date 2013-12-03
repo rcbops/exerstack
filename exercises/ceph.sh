@@ -84,6 +84,10 @@ function 002_ceph_status(){
 
 }
 
+function 003_ceph_pg_stat(){
+    ceph pg stat |includes 'active\+clean'
+}
+
 function 010_osd_tree(){
     result=0
     output="$(ceph osd tree)"
@@ -315,10 +319,6 @@ function 180_rbd_rename(){
     rbd mv  test_image_rename test_image
     rbd ls |includes test_image
     rbd ls |not_includes test_image_rename
-}
-
-function 200_ceph_pg_stat(){
-    ceph pg stat |includes 'active\+clean'
 }
 
 function 210_ceph_quorum_status(){
