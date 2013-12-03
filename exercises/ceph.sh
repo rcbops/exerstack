@@ -2,7 +2,7 @@
 
 function setup(){
   POOL_NAME="exerstack_tests"
-  OBJ_FILE=$(tempfile)
+  OBJ_FILE=$(mktemp)
   dd if=/dev/urandom of=$OBJ_FILE bs=1M count=10
   dd if=/dev/urandom of=$OBJ_FILE.modified bs=1M count=10
 }
