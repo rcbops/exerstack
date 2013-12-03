@@ -88,7 +88,7 @@ function 010_osd_tree(){
     result=0
     output="$(ceph osd tree)"
     grep -q '# id	weight	type name	up/down	reweight' <<<"$output"
-    grep -q '[-]1	1	root default' <<<"$output"
+    grep -q '[-]1.*root default' <<<"$output"
     grep -q 'osd.0	up' <<<"$output"
 }
 
