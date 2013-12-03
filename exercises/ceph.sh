@@ -2,7 +2,7 @@
 
 function setup(){
   POOL_NAME="exerstack_tests"
-  OBJ_FILE=$(tempfile)
+  OBJ_FILE=$(mktemp)
   dd if=/dev/urandom of=$OBJ_FILE bs=1M count=10
   dd if=/dev/urandom of=$OBJ_FILE.modified bs=1M count=10
 }
@@ -82,6 +82,10 @@ function 002_ceph_status(){
     # Monitor epoch should be greater than 0
     [[ $(ceph status |sed -n 's/.*election epoch \([0-9]\+\).*/\1/p') -gt 0 ]]
 
+}
+
+function 003_ceph_pg_stat(){
+    ceph pg stat |includes 'active\+clean'
 }
 
 function 010_osd_tree(){
@@ -315,10 +319,6 @@ function 180_rbd_rename(){
     rbd mv  test_image_rename test_image
     rbd ls |includes test_image
     rbd ls |not_includes test_image_rename
-}
-
-function 200_ceph_pg_stat(){
-    ceph pg stat |includes 'active\+clean'
 }
 
 function 210_ceph_quorum_status(){
