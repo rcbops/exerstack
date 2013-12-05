@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 
-NEUTRON_BIN=neutron
-if [ "${0##*/}" = "quantum-cli.sh" ]; then
+NEUTRON_BIN=""
+if [[ -e "/usr/bin/quantum" ]]; then
     NEUTRON_BIN=quantum
+elif [[ -e "/usr/bin/neutron" ]]; then
+    NEUTRON_BIN=neutron
+else
+    echo "You were slain by the dragon.  No quantum or neutron binaries found"
+    exit 1
 fi
 
 function setup() {
