@@ -72,17 +72,21 @@ function setup() {
     TEST_PRIV_KEY=${TEST_PRIV_KEY:-$TEST_KEY_NAME.pem}
     # TEST_PUB_KEY=${TEST_PUB_KEY:-$TEST_KEY_NAME.pub}
 
+    # Default tenant ID
+    OS_TENANT_ID=${OS_TENANT_ID:-$(keystone tenant-list | grep ${OS_TENANT_NAME} | awk '{print $2}')}
+    DEFAULT_TENANT_ID=${DEFAULT_TENANT_ID:-${OS_TENANT_ID}}
+
     NOVA_HAS_FLOATING=0
 
-    # neutron networks
-
+    # Neutron networks
     NETWORK_ID=$(${NEUTRON_BIN} net-create ${DEFAULT_NETWORK_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     SUBNET_ID=$(${NEUTRON_BIN} subnet-create --allocation-pool start=172.16.56.10,end=172.16.56.100 --name ${DEFAULT_SUBNET_NAME} --no-gateway ${DEFAULT_NETWORK_NAME} 172.16.56.0/24 -f shell| grep '^id=' | cut -d'"' -f2)
-    ICMP_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol icmp --direction ingress default -f shell | grep '^id=' | cut -d'"' -f2)
-    SSH_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 --direction ingress default -f shell | grep '^id=' | cut -d'"' -f2)
     NETWORK_NS="qdhcp-${NETWORK_ID}"
 
-
+    # Neutron security group rules
+    DEFAULT_SECGROUP_ID=$(${NEUTRON_BIN} security-group-list -c id -c tenant_id -c name | grep "${DEFAULT_TENANT_ID}.*default" | awk '{print $2}')
+    ICMP_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol icmp --direction ingress ${DEFAULT_SECGROUP_ID} -f shell | grep '^id=' | cut -d'"' -f2)
+    SSH_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 --direction ingress ${DEFAULT_SECGROUP_ID} -f shell | grep '^id=' | cut -d'"' -f2)
 }
 
 function 010_nova_image-list() {
@@ -154,7 +158,7 @@ function 050_nova-boot() {
     #                  [--availability_zone <availability-zone>] [--security_groups <security_groups>]
     #                  <name>
     echo ${IMAGE}
-    nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_name ${TEST_KEY_NAME} --nic net-id=${NETWORK_ID} ${DEFAULT_INSTANCE_NAME}
+    nova boot --flavor ${INSTANCE_TYPE} --config-drive true --image ${IMAGE} --key_name ${TEST_KEY_NAME} --nic net-id=${NETWORK_ID} ${DEFAULT_INSTANCE_NAME}
     if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
         echo "Instance ${DEFAULT_INSTANCE_NAME} failed to go active after ${ACTIVE_TIMEOUT} seconds"
         return 1
@@ -362,7 +366,7 @@ function 110_custom_key-nova_boot() {
     SKIP_TEST=1
     return 1
 
-    nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_path $SHARED_PUB_KEY ${DEFAULT_INSTANCE_NAME}
+    nova boot --flavor ${INSTANCE_TYPE} --config-drive true --image ${IMAGE} --key_path $SHARED_PUB_KEY ${DEFAULT_INSTANCE_NAME}
     if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
         echo "Instance ${DEFAULT_INSTANCE_NAME} failed to boot"
         return 1
@@ -403,7 +407,7 @@ function 120_file_injection-nova_boot() {
 
     local image_id=${DEFAULT_INSTANCE_NAME}-file
     local FILE_OPTS="--file /tmp/foo.txt=exercises/include/foo.txt"
-    local BOOT_OPTS="--flavor ${INSTANCE_TYPE} --image ${IMAGE}"
+    local BOOT_OPTS="--config-drive true --flavor ${INSTANCE_TYPE} --image ${IMAGE}"
     local KEY_OPTS="--key_name ${TEST_KEY_NAME}"
     local SEC_OPTS="--security_groups ${SECGROUP}"
 
