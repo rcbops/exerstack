@@ -73,7 +73,8 @@ function setup() {
     # TEST_PUB_KEY=${TEST_PUB_KEY:-$TEST_KEY_NAME.pub}
 
     # Default tenant ID
-    DEFAULT_TENANT_ID=${DEFAULT_TENANT_ID:-$(keystone tenant-list | grep ${OS_TENANT_NAME} | awk '{print $2}')}
+    OS_TENANT_ID=${OS_TENANT_ID:-$(keystone tenant-list | grep ${OS_TENANT_NAME} | awk '{print $2}')}
+    DEFAULT_TENANT_ID=${DEFAULT_TENANT_ID:-${OS_TENANT_ID}}
 
     NOVA_HAS_FLOATING=0
 
