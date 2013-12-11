@@ -154,7 +154,7 @@ function 050_nova-boot() {
     #                  [--availability_zone <availability-zone>] [--security_groups <security_groups>]
     #                  <name>
     echo ${IMAGE}
-    nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_name ${TEST_KEY_NAME} --nic net-id=${NETWORK_ID} ${DEFAULT_INSTANCE_NAME}
+    nova boot --flavor ${INSTANCE_TYPE} --config-drive true --image ${IMAGE} --key_name ${TEST_KEY_NAME} --nic net-id=${NETWORK_ID} ${DEFAULT_INSTANCE_NAME}
     if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
         echo "Instance ${DEFAULT_INSTANCE_NAME} failed to go active after ${ACTIVE_TIMEOUT} seconds"
         return 1
@@ -362,7 +362,7 @@ function 110_custom_key-nova_boot() {
     SKIP_TEST=1
     return 1
 
-    nova boot --flavor ${INSTANCE_TYPE} --image ${IMAGE} --key_path $SHARED_PUB_KEY ${DEFAULT_INSTANCE_NAME}
+    nova boot --flavor ${INSTANCE_TYPE} --config-drive true --image ${IMAGE} --key_path $SHARED_PUB_KEY ${DEFAULT_INSTANCE_NAME}
     if ! timeout $ACTIVE_TIMEOUT sh -c "while ! nova list | grep ${DEFAULT_INSTANCE_NAME} | grep ACTIVE; do sleep 1; done"; then
         echo "Instance ${DEFAULT_INSTANCE_NAME} failed to boot"
         return 1
@@ -403,7 +403,7 @@ function 120_file_injection-nova_boot() {
 
     local image_id=${DEFAULT_INSTANCE_NAME}-file
     local FILE_OPTS="--file /tmp/foo.txt=exercises/include/foo.txt"
-    local BOOT_OPTS="--flavor ${INSTANCE_TYPE} --image ${IMAGE}"
+    local BOOT_OPTS="--config-drive true --flavor ${INSTANCE_TYPE} --image ${IMAGE}"
     local KEY_OPTS="--key_name ${TEST_KEY_NAME}"
     local SEC_OPTS="--security_groups ${SECGROUP}"
 
