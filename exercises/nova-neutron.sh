@@ -72,17 +72,21 @@ function setup() {
     TEST_PRIV_KEY=${TEST_PRIV_KEY:-$TEST_KEY_NAME.pem}
     # TEST_PUB_KEY=${TEST_PUB_KEY:-$TEST_KEY_NAME.pub}
 
+    # Default tenant ID
+    OS_TENANT_ID=${OS_TENANT_ID:-$(keystone tenant-list | grep ${OS_TENANT_NAME} | awk '{print $2}')}
+    DEFAULT_TENANT_ID=${DEFAULT_TENANT_ID:-${OS_TENANT_ID}}
+
     NOVA_HAS_FLOATING=0
 
-    # neutron networks
-
+    # Neutron networks
     NETWORK_ID=$(${NEUTRON_BIN} net-create ${DEFAULT_NETWORK_NAME} -f shell | grep '^id=' | cut -d'"' -f2)
     SUBNET_ID=$(${NEUTRON_BIN} subnet-create --allocation-pool start=172.16.56.10,end=172.16.56.100 --name ${DEFAULT_SUBNET_NAME} --no-gateway ${DEFAULT_NETWORK_NAME} 172.16.56.0/24 -f shell| grep '^id=' | cut -d'"' -f2)
-    ICMP_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol icmp --direction ingress default -f shell | grep '^id=' | cut -d'"' -f2)
-    SSH_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 --direction ingress default -f shell | grep '^id=' | cut -d'"' -f2)
     NETWORK_NS="qdhcp-${NETWORK_ID}"
 
-
+    # Neutron security group rules
+    DEFAULT_SECGROUP_ID=$(${NEUTRON_BIN} security-group-list -c id -c tenant_id -c name | grep "${DEFAULT_TENANT_ID}.*default" | awk '{print $2}')
+    ICMP_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol icmp --direction ingress ${DEFAULT_SECGROUP_ID} -f shell | grep '^id=' | cut -d'"' -f2)
+    SSH_SECGROUP_RULE_ID=$(${NEUTRON_BIN} security-group-rule-create --protocol tcp --port-range-min 22 --port-range-max 22 --direction ingress ${DEFAULT_SECGROUP_ID} -f shell | grep '^id=' | cut -d'"' -f2)
 }
 
 function 010_nova_image-list() {
