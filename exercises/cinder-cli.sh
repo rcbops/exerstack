@@ -90,7 +90,7 @@ function 050_cinder_quota-show() {
 }
 
 function 060_cinder_quota-update() {
-    CURRENT_VOLUME_QUOTA=$(cinder quota-show ${OS_TENANT_NAME}|grep -i volumes|cut -d'|' -f 3|sed -e 's/ //g')
+    CURRENT_VOLUME_QUOTA=$(cinder quota-show ${OS_TENANT_NAME}|awk '$2~/^volumes$/{print $4}')
     TARGET_VOLUME_QUOTA=$(( CURRENT_VOLUME_QUOTA +1 ))
     cinder quota-update --volumes ${TARGET_VOLUME_QUOTA} ${OS_TENANT_NAME}
     NEW_VOLUME_QUOTA=$(cinder quota-show ${OS_TENANT_NAME}|grep -i volumes|cut -d'|' -f 3|sed -e 's/ //g')
