@@ -210,5 +210,14 @@ function teardown() {
 #    vgremove cinder-volumes
 #    rm -fr ${TMPDIR}/cinder-volumes
 #_    losetup -d /dev/loop3
+cinder type-delete $(cinder type-list|grep ${DEFAULT_TYPE_NAME}|cut -d'|' -f2)
+
+for i in $(cinder snapshot-list | grep $DEFAULT_VOLUME_SNAPSHOT_NAME| cut -d'|' -f2); do
+    cinder snapshot-delete $i
+done
+
+for i in $(cinder list | grep $DEFAULT_VOLUME_NAME| cut -d'|' -f2); do
+    cinder delete $i
+done
 return 0
 }
