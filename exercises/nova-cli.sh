@@ -26,10 +26,10 @@ function setup() {
     DEFAULT_INSTANCE_TYPE=${DEFAULT_INSTANCE_TYPE:-m1.tiny}
 
     # Boot this image, use first AMi image if unset
-    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-$(nova image-list | awk '{ print $4 }' | grep "\-image" | head -n1)}
+    DEFAULT_IMAGE_NAME=${DEFAULT_IMAGE_NAME:-$(nova image-list | tail -n +3 | egrep -v '^\+' | cut -d'|' -f3 | sed -e 's/ //g')}
 
     # Name for snapshot
-    DEFAULT_SNAP_NAME=${DEFAULT_SNAP_NAME:-${DEFAULT_IMAGE_NAME}-snapshot}
+    DEFAULT_SNAP_NAME=${DEFAULT_SNAP_NAME:-${DEFAULT_INSTANCE_NAME}-snapshot}
 
     # Find the instance type ID
     INSTANCE_TYPE=$(nova flavor-list | egrep $DEFAULT_INSTANCE_TYPE | head -1 | cut -d" " -f2)
