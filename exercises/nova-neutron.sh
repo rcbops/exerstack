@@ -1,9 +1,9 @@
 
 NEUTRON_BIN=""
-if [[ -e "/usr/bin/quantum" ]]; then
-    NEUTRON_BIN=quantum
-elif [[ -e "/usr/bin/neutron" ]]; then
+if [[ -e "/usr/bin/neutron" ]]; then
     NEUTRON_BIN=neutron
+elif [[ -e "/usr/bin/quantum" ]]; then
+    NEUTRON_BIN=quantum
 else
     echo "You were slain by the dragon.  No quantum or neutron binaries found"
     exit 1
