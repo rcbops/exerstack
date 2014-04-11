@@ -283,7 +283,7 @@ function 320_service_details() {
 #### endpoints ####
 
 function 400_endpoint_create() {
-    if ! TEST_ENDPOINT_ID=$(keystone endpoint-create --service_id $TEST_SERVICE_ID --publicurl $TEST_PUB_URL --adminurl $TEST_ADM_URL --internalurl $TEST_INT_URL | egrep ' id ' | awk '{print $4}'); then
+    if ! TEST_ENDPOINT_ID=$(keystone endpoint-create --service_id $TEST_SERVICE_ID --publicurl $TEST_PUB_URL --adminurl $TEST_ADM_URL --internalurl $TEST_INT_URL --region $NOVA_REGION_NAME | egrep ' id ' | awk '{print $4}'); then
         echo "could not create endpoint"
         return 1
     fi
