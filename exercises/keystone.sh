@@ -93,8 +93,8 @@ function 030_tenant_details() {
 }
 
 function 035_tenant_disable() {
-    SKIP_TEST=1
-    SKIP_MSG="Skipping pending https://bugs.launchpad.net/keystone/+bug/976947"
+    #SKIP_TEST=1
+    #SKIP_MSG="Skipping pending https://bugs.launchpad.net/keystone/+bug/976947"
     # bug 976947
     # patched in https://review.openstack.org/#/c/6517/
     # disable tenant (currently command succeeds but the disable actually fails as of keystone folsom-1) 
@@ -102,10 +102,10 @@ function 035_tenant_disable() {
         if  keystone tenant-get $TEST_TENANT_ID| grep -i enabled | grep -i true ; then
             echo "tenant disable command succeeded but tenant was not disabled"
             return 1
-        else
-            echo "disable tenant command failed"
-            return 1
         fi
+    else
+        echo "disable tenant command failed"
+        return 1
     fi
 }
     
