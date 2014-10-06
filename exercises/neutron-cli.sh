@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ -e "/usr/bin/neutron" ]]; then
+if [[ -e "/usr/bin/neutron" || "/usr/local/bin/neutron" ]]; then
     NEUTRON_BIN=neutron
 elif [[ -e "/usr/bin/quantum" ]]; then
     NEUTRON_BIN=quantum
